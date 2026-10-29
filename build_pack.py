@@ -45,7 +45,7 @@ with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
         result_zip.writestr(path, content)
 sha = hashlib.sha1(out.read_bytes()).hexdigest()
 Path("pack-info.properties").write_text(
-    "url=https://github.com/GxdionSenpai/Axoria-Resourcepack/releases/download/latest/axoria-resourcepack.zip\\n"
-    + "sha1=" + sha + "\\n"
+    "url=https://github.com/GxdionSenpai/Axoria-Resourcepack/releases/download/latest/axoria-resourcepack.zip\n"
+    + "sha1=" + sha + "\n"
 )
 print("Published SHA-1:", sha)
