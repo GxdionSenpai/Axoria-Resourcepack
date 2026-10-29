@@ -60,7 +60,7 @@ def create_eissense_png():
     raw = b"".join(b"\x00" + b"".join(bytes(pixel) for pixel in row) for row in pixels)
     def chunk(kind, payload):
         return struct.pack("!I", len(payload)) + kind + payload + struct.pack("!I", zlib.crc32(kind + payload) & 0xffffffff)
-    return (b"\x89PNG\\r\\n\x1a\\n" + chunk(b"IHDR", struct.pack("!2I5B", w, h, 8, 6, 0, 0, 0))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack("!2I5B", w, h, 8, 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 files["assets/axoria/textures/item/eissense.png"] = create_eissense_png()
