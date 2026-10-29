@@ -84,7 +84,7 @@ for plain, texture in (("clock", "clock_00"), ("lightning_rod", "lightning_rod")
 for base, custom, value in items:
     # When no pack is active, the client always uses Minecraft's native item model.
     # When Axoria is active, only the numeric CustomModelData selects the custom model.
-    vanilla = ("axoria:item/vanilla_" + base) if base in ("clock", "lightning_rod") else ("minecraft:item/" + base)
+    vanilla = ("axoria:item/vanilla_clock" if base == "clock" else "minecraft:item/" + base)
     model = {
         "model": {
             "type": "minecraft:range_dispatch",
