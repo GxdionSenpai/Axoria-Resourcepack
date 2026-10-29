@@ -73,18 +73,27 @@ files["assets/axoria/models/item/eissense.json"] = json.dumps({
     "textures": {"layer0": "axoria:item/eissense"}
 }, separators=(",", ":")).encode()
 
+# Explicit vanilla fallbacks avoid missing-model squares on modern Minecraft
+# when clock or lightning_rod is not a normal standalone model asset.
+for plain, texture in (("clock", "clock_00"), ("lightning_rod", "lightning_rod")):
+    files["assets/axoria/models/item/vanilla_" + plain + ".json"] = json.dumps({
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": "minecraft:item/" + texture}
+    }, separators=(",", ":")).encode()
+
 for base, custom, value in items:
     # When no pack is active, the client always uses Minecraft's native item model.
     # When Axoria is active, only the numeric CustomModelData selects the custom model.
+    vanilla = ("axoria:item/vanilla_" + base) if base in ("clock", "lightning_rod") else ("minecraft:item/" + base)
     model = {
         "model": {
             "type": "minecraft:range_dispatch",
             "property": "minecraft:custom_model_data",
             "index": 0,
-            "fallback": {"type": "minecraft:model", "model": "minecraft:item/" + base},
+            "fallback": {"type": "minecraft:model", "model": vanilla},
             "entries": [
                 {"threshold": value, "model": {"type": "minecraft:model", "model": "axoria:item/" + custom}},
-                {"threshold": value + 0.5, "model": {"type": "minecraft:model", "model": "minecraft:item/" + base}}
+                {"threshold": value + 0.5, "model": {"type": "minecraft:model", "model": vanilla}}
             ]
         }
     }
