@@ -124,7 +124,10 @@ def repair_enclosed_holes(png_bytes):
 # Repair accidental fully enclosed holes in all item texture PNGs.
 for path, data in list(files.items()):
     if path.startswith("assets/axoria/textures/item/") and path.endswith(".png"):
-        files[path] = repair_enclosed_holes(data)
+        try:
+            files[path] = repair_enclosed_holes(data)
+        except Exception as exc:
+            raise RuntimeError("Invalid item PNG texture: " + path) from exc
 
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
