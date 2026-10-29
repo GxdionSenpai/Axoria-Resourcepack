@@ -2,6 +2,9 @@ name: Publish Axoria Pack
 on:
   push:
     branches: [main]
+    paths:
+      - 'source-pack.zip'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:
 permissions:
   contents: write
