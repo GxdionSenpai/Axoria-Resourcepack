@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'source-pack.zip'
+      - 'build_pack.py'
       - '.github/workflows/publish.yml'
   workflow_dispatch:
 permissions:
@@ -17,19 +18,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import zipfile, hashlib
-          source=Path('source-pack.zip')
-          if not source.is_file():
-              raise SystemExit('Upload source-pack.zip first')
-          with zipfile.ZipFile(source) as z:
-              assert z.testzip() is None
-              assert 'pack.mcmeta' in z.namelist()
-          Path('axoria-resourcepack.zip').write_bytes(source.read_bytes())
-          sha=hashlib.sha1(source.read_bytes()).hexdigest()
-          Path('pack-info.properties').write_text('url=https://github.com/GxdionSenpai/Axoria-Resourcepack/releases/download/latest/axoria-resourcepack.zip\nsha1='+sha+'\n')
-          PY
+          python3 build_pack.py
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest axoria-resourcepack.zip --clobber
           else
