@@ -18,7 +18,7 @@ items = [
     ("fishing_rod", "enterhaken", 1005),
     ("feather", "phoenix_feder", 1006),
     ("spyglass", "monster_lupe", 1007),
-    ("lightning_rod", "blitzstab", 1008),
+    ("stick", "blitzstab", 1008),
     ("snowball", "frostkugel", 1009),
     ("diamond_hoe", "eissense", 1010),
 ]
@@ -75,7 +75,7 @@ files["assets/axoria/models/item/eissense.json"] = json.dumps({
 
 # Explicit vanilla fallbacks avoid missing-model squares on modern Minecraft
 # when clock or lightning_rod is not a normal standalone model asset.
-for plain, texture in (("clock", "clock_00"), ("lightning_rod", "lightning_rod")):
+for plain, texture in (("clock", "clock_00"),):
     files["assets/axoria/models/item/vanilla_" + plain + ".json"] = json.dumps({
         "parent": "minecraft:item/generated",
         "textures": {"layer0": "minecraft:item/" + texture}
