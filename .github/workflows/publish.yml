@@ -29,5 +29,16 @@ jobs:
           git add -f pack-info.properties
           if ! git diff --cached --quiet; then
             git commit -m 'Update pack manifest [skip ci]'
-            git push
+            # Rebase onto latest main before push to handle edits made while the job runs.
+            for attempt in 1 2 3; do
+              git fetch origin main
+              git rebase -X theirs origin/main
+              if git push origin HEAD:main; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo 'Failed to publish pack-info.properties after 3 attempts' >&2
+                exit 1
+              fi
+            done
           fi
