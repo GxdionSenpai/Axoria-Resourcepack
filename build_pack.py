@@ -6,6 +6,9 @@ from pathlib import Path
 import zipfile
 import struct
 import zlib
+from io import BytesIO
+from collections import deque
+from PIL import Image
 
 items = [
     ("clock", "zeitstab", 1001),
@@ -82,6 +85,47 @@ for base, custom, value in items:
         }
     }
     files["assets/minecraft/items/" + base + ".json"] = json.dumps(model, separators=(",", ":")).encode()
+def repair_enclosed_holes(png_bytes):
+    """Fill only enclosed transparent gaps; preserve the exterior silhouette."""
+    image = Image.open(BytesIO(png_bytes)).convert("RGBA")
+    w, h = image.size
+    px = image.load()
+    exterior = set()
+    queue = deque()
+    for x in range(w):
+        if px[x, 0][3] == 0: queue.append((x, 0))
+        if px[x, h-1][3] == 0: queue.append((x, h-1))
+    for y in range(h):
+        if px[0, y][3] == 0: queue.append((0, y))
+        if px[w-1, y][3] == 0: queue.append((w-1, y))
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) in exterior or px[x, y][3] != 0: continue
+        exterior.add((x, y))
+        for nx, ny in ((x-1,y),(x+1,y),(x,y-1),(x,y+1)):
+            if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in exterior:
+                if px[nx, ny][3] == 0: queue.append((nx, ny))
+    holes = [(x,y) for y in range(h) for x in range(w)
+             if px[x,y][3] == 0 and (x,y) not in exterior]
+    for x, y in holes:
+        neighbors = [px[nx,ny] for nx,ny in ((x-1,y),(x+1,y),(x,y-1),(x,y+1))
+                     if 0 <= nx < w and 0 <= ny < h and px[nx,ny][3] > 0]
+        if neighbors:
+            r = sum(c[0] for c in neighbors)//len(neighbors)
+            g = sum(c[1] for c in neighbors)//len(neighbors)
+            b = sum(c[2] for c in neighbors)//len(neighbors)
+            px[x,y] = (r,g,b,255)
+    if not holes: return png_bytes
+    result = BytesIO()
+    image.save(result, "PNG", optimize=True)
+    print("Filled", len(holes), "enclosed transparent pixels")
+    return result.getvalue()
+
+# Repair accidental fully enclosed holes in all item texture PNGs.
+for path, data in list(files.items()):
+    if path.startswith("assets/axoria/textures/item/") and path.endswith(".png"):
+        files[path] = repair_enclosed_holes(data)
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
