@@ -30,42 +30,20 @@ with zipfile.ZipFile(source) as source_zip:
     assert source_zip.testzip() is None
     assert "pack.mcmeta" in source_zip.namelist()
     files = {name: source_zip.read(name) for name in source_zip.namelist() if not name.endswith("/")}
-# Generate a 32x32 ice scythe texture with a continuous, opaque silhouette.
-# Transparent pixels are only used outside the item (not as interior holes).
+# The approved cyan/black scythe art is stored losslessly in this
+# repository as base64, keeping the source PNG available to the builder.
+# In-game the silhouette has strictly 0/255 alpha (no semi-transparent
+# item pixels), and the exterior remains transparent.
+import base64
 def create_eissense_png():
-    """Detailed pixel-art scythe: dark outline, warm haft, shaded icy crescent."""
-    from PIL import ImageDraw
-    canvas = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    d = ImageDraw.Draw(canvas)
-    # Long dark wooden/iron haft, diagonal and outlined like other Axoria weapons.
-    d.line([(6, 29), (12, 23), (18, 17), (23, 12)], fill="#241c29", width=6)
-    d.line([(6, 29), (12, 23), (18, 17), (23, 12)], fill="#6f4729", width=4)
-    d.line([(7, 28), (13, 22), (19, 16), (23, 12)], fill="#b58b49", width=1)
-    # Iron bindings and handle cap.
-    d.polygon([(4, 28), (7, 25), (10, 28), (7, 31)], fill="#1d2632")
-    d.line([(10, 24), (13, 27)], fill="#d6b761", width=2)
-    d.line([(16, 18), (19, 21)], fill="#c9ad5a", width=2)
-    # Outer silhouette of a curved, hooked ice blade.
-    d.polygon([(21, 15), (18, 12), (14, 9), (9, 6), (4, 5), (1, 7),
-               (3, 3), (8, 1), (14, 2), (20, 5), (25, 9),
-               (27, 13), (26, 17), (23, 18)], fill="#172333")
-    d.polygon([(21, 13), (17, 10), (12, 7), (7, 5), (4, 5),
-               (9, 3), (14, 4), (20, 7), (24, 10), (25, 14),
-               (23, 16)], fill="#2c668b")
-    d.polygon([(20, 11), (16, 8), (11, 5), (8, 4), (14, 4),
-               (20, 7), (23, 10), (24, 13), (22, 14)], fill="#53b4ce")
-    # Brighter beveled cutting edge and individually placed glints.
-    d.line([(4, 4), (8, 2), (14, 3), (19, 6), (23, 10)], fill="#d6f9ff", width=1)
-    d.line([(7, 5), (12, 6), (17, 9)], fill="#93e8f0", width=1)
-    d.line([(23, 13), (21, 15), (20, 16)], fill="#142e47", width=2)
-    # Dark metal socket binds blade to the haft.
-    d.polygon([(21, 13), (24, 12), (27, 15), (24, 19), (20, 17)], fill="#202734")
-    d.polygon([(22, 14), (24, 14), (25, 16), (23, 18), (21, 16)], fill="#b39a53")
-    d.point([(24, 15), (22, 16)], fill="#ffe29a")
-    # Keep the actual object entirely opaque, with a transparent outside.
-    out = BytesIO()
-    canvas.save(out, format="PNG", optimize=True)
-    return out.getvalue()
+    raw = base64.b64decode(Path("eissense.png.b64").read_text().strip())
+    image = Image.open(BytesIO(raw)).convert("RGBA")
+    if image.size != (32, 32):
+        raise ValueError("Eissense texture must be exactly 32x32")
+    alphas = {a for *_, a in image.getdata()}
+    if not alphas.issubset({0, 255}):
+        raise ValueError("Eissense must have full pixels with binary alpha")
+    return raw
 
 files["assets/axoria/textures/item/eissense.png"] = create_eissense_png()
 files["assets/axoria/models/item/eissense.json"] = json.dumps({
