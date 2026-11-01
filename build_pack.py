@@ -21,6 +21,7 @@ items = [
     ("stick", "blitzstab", 1008),
     ("snowball", "frostkugel", 1009),
     ("diamond_hoe", "eissense", 1010),
+    ("stone_axe", "holzfaelleraxt", 1011),
 ]
 source = Path("source-pack.zip")
 if not source.is_file():
@@ -44,6 +45,37 @@ def create_eissense_png():
     if not alphas.issubset({0, 255}):
         raise ValueError("Eissense must have full pixels with binary alpha")
     return raw
+
+# Restore the special Holzfälleraxt as a pack-only texture; players without
+# the pack get the ordinary stone axe via vanilla's default item model.
+# Preserve any existing source-pack timber artwork rather than overwriting it.
+timber_texture = "assets/axoria/textures/item/holzfaelleraxt.png"
+timber_model = "assets/axoria/models/item/holzfaelleraxt.json"
+if timber_texture not in files:
+    from PIL import ImageDraw
+    canvas = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(canvas)
+    # Original-style wooden handle with an iron axe head. Every actual sprite
+    # pixel is fully opaque, leaving only the empty background transparent.
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#181c29", width=6)
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#81522e", width=4)
+    d.line([(7, 28), (12, 23), (16, 18), (20, 13)], fill="#bf8242", width=1)
+    d.polygon([(14, 12), (19, 5), (24, 3), (28, 4), (31, 8), (27, 14),
+               (22, 19), (17, 18)], fill="#1c2533")
+    d.polygon([(17, 12), (21, 6), (25, 5), (29, 7), (27, 12),
+               (22, 17), (18, 16)], fill="#607789")
+    d.polygon([(19, 10), (23, 6), (28, 7), (26, 11), (22, 15)],
+              fill="#98b5c3")
+    d.line([(23, 6), (28, 7), (26, 11)], fill="#e0eff3", width=1)
+    d.polygon([(17, 14), (20, 11), (23, 14), (20, 17)], fill="#2d394b")
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    files[timber_texture] = output.getvalue()
+if timber_model not in files:
+    files[timber_model] = json.dumps({
+        "parent": "minecraft:item/handheld",
+        "textures": {"layer0": "axoria:item/holzfaelleraxt"}
+    }, separators=(",", ":")).encode()
 
 files["assets/axoria/textures/item/eissense.png"] = create_eissense_png()
 files["assets/axoria/models/item/eissense.json"] = json.dumps({
