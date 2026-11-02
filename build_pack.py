@@ -78,11 +78,13 @@ if timber_model not in files:
         "textures": {"layer0": "axoria:item/holzfaelleraxt"}
     }, separators=(",", ":")).encode()
 
-# Detailed Axoria Backpack sprite. Every texture pixel has full opacity.
+# Backpack sprite: transparent exterior (alpha 0), solid pixels only (alpha 255).
+# Semitransparent pixels are never allowed, avoiding visible halos in Minecraft.
 backpack_png = base64.b64decode(Path("backpack.png.b64").read_text().strip())
 backpack_image = Image.open(BytesIO(backpack_png)).convert("RGBA")
-if backpack_image.size != (32, 32) or any(a != 255 for *_, a in backpack_image.getdata()):
-    raise ValueError("Backpack sprite must be 32x32 with fully opaque pixels")
+backpack_alpha = {a for *_, a in backpack_image.getdata()}
+if backpack_image.size != (32, 32) or not backpack_alpha.issubset({0, 255}) or backpack_alpha != {0, 255}:
+    raise ValueError("Backpack must be a 32x32 sprite with transparent background and opaque item pixels")
 files["assets/axoria/textures/item/backpack.png"] = backpack_png
 files["assets/axoria/models/item/backpack.json"] = json.dumps({
     "parent": "minecraft:item/generated",
