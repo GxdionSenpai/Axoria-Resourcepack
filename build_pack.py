@@ -109,15 +109,36 @@ for base, custom, value in items:
     # When no pack is active, the client always uses Minecraft's native item model.
     # When Axoria is active, only the numeric CustomModelData selects the custom model.
     vanilla = ("axoria:item/vanilla_clock" if base == "clock" else "minecraft:item/" + base)
+    vanilla_model = {"type": "minecraft:model", "model": vanilla}
+    if base == "chest":
+        # A chest is a special block-entity item, NOT an ordinary JSON item
+        # model. Falling back to minecraft:model / minecraft:item/chest renders
+        # normal chests as invisible/missing items when the pack is enabled.
+        # Keep the vanilla normal/christmas chest rendering intact.
+        def chest_model(texture):
+            return {
+                "type": "minecraft:special",
+                "base": "minecraft:item/chest",
+                "model": {"type": "minecraft:chest", "texture": "minecraft:" + texture}
+            }
+        vanilla_model = {
+            "type": "minecraft:select",
+            "property": "minecraft:local_time",
+            "pattern": "MM-dd",
+            "cases": [
+                {"when": ["12-24", "12-25", "12-26"], "model": chest_model("christmas")}
+            ],
+            "fallback": chest_model("normal")
+        }
     model = {
         "model": {
             "type": "minecraft:range_dispatch",
             "property": "minecraft:custom_model_data",
             "index": 0,
-            "fallback": {"type": "minecraft:model", "model": vanilla},
+            "fallback": vanilla_model,
             "entries": [
                 {"threshold": value, "model": {"type": "minecraft:model", "model": "axoria:item/" + custom}},
-                {"threshold": value + 0.5, "model": {"type": "minecraft:model", "model": vanilla}}
+                {"threshold": value + 0.5, "model": vanilla_model}
             ]
         }
     }
