@@ -22,7 +22,7 @@ items = [
     ("snowball", "frostkugel", 1009),
     ("diamond_hoe", "eissense", 1010),
     ("stone_axe", "holzfaelleraxt", 1011),
-    ("leather", "backpack", 1012),
+    ("chest", "backpack", 1012),
 ]
 source = Path("source-pack.zip")
 if not source.is_file():
