@@ -22,6 +22,7 @@ items = [
     ("snowball", "frostkugel", 1009),
     ("diamond_hoe", "eissense", 1010),
     ("stone_axe", "holzfaelleraxt", 1011),
+    ("leather", "backpack", 1012),
 ]
 source = Path("source-pack.zip")
 if not source.is_file():
@@ -76,6 +77,17 @@ if timber_model not in files:
         "parent": "minecraft:item/handheld",
         "textures": {"layer0": "axoria:item/holzfaelleraxt"}
     }, separators=(",", ":")).encode()
+
+# Detailed Axoria Backpack sprite. Every texture pixel has full opacity.
+backpack_png = base64.b64decode(Path("backpack.png.b64").read_text().strip())
+backpack_image = Image.open(BytesIO(backpack_png)).convert("RGBA")
+if backpack_image.size != (32, 32) or any(a != 255 for *_, a in backpack_image.getdata()):
+    raise ValueError("Backpack sprite must be 32x32 with fully opaque pixels")
+files["assets/axoria/textures/item/backpack.png"] = backpack_png
+files["assets/axoria/models/item/backpack.json"] = json.dumps({
+    "parent": "minecraft:item/generated",
+    "textures": {"layer0": "axoria:item/backpack"}
+}, separators=(",", ":")).encode()
 
 files["assets/axoria/textures/item/eissense.png"] = create_eissense_png()
 files["assets/axoria/models/item/eissense.json"] = json.dumps({
