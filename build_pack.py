@@ -141,7 +141,7 @@ def create_axoria_key_png(tier):
         raise ValueError("Axoria "+tier+" key must have opaque sprite pixels and a transparent exterior")
     return raw
 
-for rarity in ("normal","epic","legendary"):
+for rarity in ("normal","epic","legendary","mythical"):
     texture_name="axoria_key_"+rarity
     files["assets/axoria/textures/item/"+texture_name+".png"]=create_axoria_key_png(rarity)
     files["assets/axoria/models/item/"+texture_name+".json"]=json.dumps({
@@ -160,7 +160,7 @@ items.append(("bow","sternenbogen_charged",1111))
 # TRIAL_KEYs, and all players who decline the entire pack, stay vanilla.
 trial_key_fallback={"type":"minecraft:model","model":"minecraft:item/trial_key"}
 trial_key_entries=[]
-for numeric,rarity in ((1013,"normal"),(1014,"epic"),(1015,"legendary")):
+for numeric,rarity in ((1013,"normal"),(1014,"epic"),(1015,"legendary"),(1016,"mythical")):
     trial_key_entries.extend([
         {"threshold":numeric,"model":{"type":"minecraft:model",
             "model":"axoria:item/axoria_key_"+rarity}},
