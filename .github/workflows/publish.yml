@@ -7,6 +7,7 @@ on:
       - 'build_pack.py'
       - 'backpack.png.b64'
       - 'eissense.png.b64'
+      - 'axoria_key_*.png.b64'
       - '.github/workflows/publish.yml'
   workflow_dispatch:
 permissions:
