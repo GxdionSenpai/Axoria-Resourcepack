@@ -1,158 +1,27 @@
-"""Individual 64x64, pixel-sharp Axoria item sprites; 0/255 alpha only."""
-from io import BytesIO
+"""Premium 64x64 individual Axoria in-game item textures from the curated atlas."""
+import base64
 import json
-from PIL import Image, ImageDraw
+from io import BytesIO
+from pathlib import Path
+from PIL import Image
 
 NAMES=["trichterherz","schmiedekern","haendlervertrag","titanfaust","abyss_dreizack","raketenwerfer","krabbenschere","dimensionsklinge","sternenbogen","gravitationsbrecher"]
+# Schmiedekern must never inherit a placeable furnace block model.
 BASE=["hopper","magma_cream","paper","netherite_hoe","trident","crossbow","shears","netherite_sword","bow","mace"]
 
-class Sprite:
-    def __init__(self):
-        self.im=Image.new("RGBA",(32,32),(0,0,0,0))
-        self.d=ImageDraw.Draw(self.im)
-    def p(self,xy,color):
-        self.d.polygon(xy,fill=color)
-    def r(self,xy,color):
-        self.d.rectangle(xy,fill=color)
-    def l(self,points,color,width=1):
-        self.d.line(points,fill=color,width=width)
-    def e(self,xy,color):
-        self.d.ellipse(xy,fill=color)
-    def shine(self,pts,c="#f8d5ff"):
-        for x,y in pts:
-            self.r((x,y,x,y),c)
-    def output(self):
-        # Nearest-neighbour: hard-edged blocks, no interpolated pixels/alpha.
-        large=self.im.resize((64,64),Image.Resampling.NEAREST)
-        rgba={a for _,_,_,a in large.getdata()}
-        assert large.size==(64,64) and rgba.issubset({0,255}) and 0 in rgba and 255 in rgba
-        stream=BytesIO();large.save(stream,"PNG",optimize=True)
-        return stream.getvalue()
-
-def trichterherz(s):
-    s.p([(4,7),(27,7),(25,20),(19,22),(19,28),(12,29),(12,22),(6,19)],"#171626")
-    s.p([(5,7),(26,7),(24,12),(8,12)],"#9e74c9")
-    s.p([(7,13),(24,13),(22,19),(18,21),(18,27),(13,27),(13,20),(9,18)],"#494065")
-    s.l([(7,14),(8,18),(13,21)],"#a78de2",2)
-    s.l([(17,22),(17,26)],"#211d31",2)
-    s.p([(9,10),(14,7),(17,10),(20,7),(24,10),(23,16),(16,22),(9,16)],"#2c0d4e")
-    s.p([(10,11),(13,9),(16,12),(19,9),(22,11),(21,15),(16,20),(11,15)],"#c34bff")
-    s.p([(12,11),(14,11),(16,13),(18,10),(20,11),(19,14),(16,17)],"#ffaaff")
-    s.shine([(9,8),(24,9),(5,17),(25,21),(21,23)],"#e4a2ff")
-def schmiedekern(s):
-    # A glowing magical forge core, deliberately NOT a furnace.
-    s.e((5,5,26,26),"#181c2a")
-    s.e((7,7,24,24),"#51445e")
-    s.e((9,9,22,22),"#fb6b19")
-    s.e((11,10,20,21),"#ffd54d")
-    s.p([(15,6),(21,12),(19,20),(16,24),(11,19),(10,13)],"#ff9b28")
-    s.p([(15,8),(18,14),(16,20),(13,18),(13,13)],"#fff6aa")
-    for box in [(3,12,7,18),(24,12,28,18),(12,3,18,7),(12,24,18,28)]:
-        s.r(box,"#19172c")
-    for box in [(4,13,6,16),(25,13,27,16),(13,4,16,6),(13,25,16,27)]:
-        s.r(box,"#a976e4")
-    s.shine([(6,6),(24,5),(26,24),(5,25)],"#ffaf62")
-def haendlervertrag(s):
-    s.p([(6,3),(10,2),(24,5),(27,8),(26,29),(7,27),(5,24)],"#382739")
-    s.p([(8,4),(23,6),(25,8),(24,26),(8,25),(7,22)],"#e7c489")
-    s.p([(8,5),(11,4),(12,25),(8,25)],"#ac744d")
-    s.r((11,10,21,11),"#835244");s.r((11,14,21,15),"#835244")
-    s.r((11,18,18,19),"#835244")
-    s.p([(19,20),(23,20),(25,23),(24,27),(20,28),(18,24)],"#812337")
-    s.p([(20,22),(23,22),(23,25),(20,25)],"#df4b5c")
-    s.p([(6,4),(8,2),(10,3),(10,27),(8,29),(6,27)],"#b68f67")
-    s.shine([(11,6),(23,10),(10,23)],"#fff0b6")
-def titanfaust(s):
-    s.p([(3,13),(7,9),(12,10),(16,6),(20,7),(22,10),(26,11),(29,16),(25,24),(17,28),(8,25),(5,21)],"#100f21")
-    s.p([(5,14),(9,11),(14,13),(17,9),(20,9),(21,13),(26,14),(26,19),(22,24),(17,26),(9,23)],"#5e4d87")
-    for i in range(4):
-        x=6+i*5
-        s.r((x,11-(i%2),x+3,15-(i%2)),"#25223c")
-        s.r((x+1,11-(i%2),x+2,12-(i%2)),"#c7b9f0")
-    s.p([(12,16),(18,15),(22,19),(20,24),(15,26),(10,22)],"#31164f")
-    s.p([(13,17),(17,17),(20,20),(17,23),(13,22)],"#c633ff")
-    s.r((8,25,17,28),"#261d37");s.r((10,26,15,27),"#a15ed6")
-    s.shine([(4,11),(26,9),(27,22)],"#eb94ff")
-def abyss_dreizack(s):
-    # Long turquoise trident diagonal blade pointing NE.
-    s.l([(6,28),(21,12)],"#10263c",6)
-    s.l([(7,27),(22,11)],"#30c6e4",4)
-    s.l([(9,25),(20,13)],"#c9ffff",1)
-    s.p([(17,11),(20,9),(20,3),(23,1),(25,7),(23,13),(22,17),(19,17)],"#123a6b")
-    s.p([(19,11),(22,9),(22,3),(23,2),(24,9),(22,14)],"#7affff")
-    s.p([(17,11),(12,7),(13,4),(16,3),(17,8),(21,12)],"#173963")
-    s.p([(18,10),(15,7),(15,4),(14,7),(19,13)],"#47dcf8")
-    s.p([(22,11),(26,6),(27,4),(29,7),(27,12),(24,15)],"#173963")
-    s.p([(23,11),(27,7),(27,10),(24,13)],"#6af9ff")
-    s.l([(5,29),(9,26)],"#c1fdff",2)
-    s.shine([(12,18),(25,17),(6,22)],"#7df4ff")
-def raketenwerfer(s):
-    s.p([(3,17),(15,8),(24,10),(30,17),(20,26),(7,24)],"#141625")
-    s.p([(5,16),(16,10),(25,12),(28,17),(20,23),(9,22)],"#535a79")
-    s.p([(7,15),(16,10),(24,12),(26,15),(16,21)],"#9daec8")
-    s.p([(18,13),(25,15),(25,19),(18,24)],"#392443")
-    s.p([(19,14),(23,15),(24,17),(20,21)],"#f34e5b")
-    s.p([(21,15),(25,15),(25,17),(22,19)],"#ffb354")
-    s.p([(8,21),(12,21),(15,28),(10,30)],"#232036")
-    s.p([(10,22),(12,23),(13,27),(11,28)],"#ab6e87")
-    s.p([(14,12),(20,5),(23,6),(21,11)],"#6e3b98")
-    s.p([(20,6),(22,6),(23,8),(19,11)],"#f894ff")
-    s.r((6,18,9,20),"#e53c74")
-    s.shine([(6,14),(18,8),(27,11)],"#ffc8e8")
-def krabbenschere(s):
-    s.p([(12,20),(16,18),(20,28),(16,30),(11,29)],"#143a4d")
-    s.p([(13,21),(17,20),(18,27),(15,28)],"#28c4d8")
-    s.p([(8,14),(12,11),(18,14),(19,21),(15,25),(8,22),(5,19)],"#5f2b35")
-    s.p([(8,15),(12,13),(17,15),(17,21),(13,23),(8,21)],"#f17d43")
-    s.p([(6,15),(3,8),(5,4),(8,3),(12,7),(12,11),(9,13)],"#612b39")
-    s.p([(6,13),(5,8),(6,5),(8,5),(10,8),(10,11)],"#ffb375")
-    s.p([(18,14),(22,10),(20,6),(23,3),(27,5),(28,10),(25,16),(21,19)],"#512940")
-    s.p([(20,13),(24,8),(23,5),(25,5),(26,9),(24,14),(21,16)],"#f68b4c")
-    s.p([(10,17),(14,16),(15,19),(12,21)],"#ffd07b")
-    s.shine([(5,3),(27,4),(11,16)],"#ffe7b6")
-def dimensionsklinge(s):
-    s.l([(6,27),(22,9)],"#0e0d24",7)
-    s.l([(7,26),(22,9)],"#6830a8",4)
-    s.l([(9,24),(21,10)],"#f080ff",2)
-    s.p([(19,8),(25,2),(28,2),(27,8),(23,13)],"#211631")
-    s.p([(21,8),(26,3),(26,7),(22,11)],"#b14cff")
-    s.p([(13,17),(17,14),(21,17),(17,21)],"#24192e")
-    s.p([(12,18),(16,15),(20,18),(17,19)],"#d382ff")
-    s.p([(5,26),(8,23),(11,26),(8,29)],"#21182d")
-    s.p([(6,27),(8,25),(9,27),(8,28)],"#e59aff")
-    s.shine([(25,11),(27,16),(15,9),(8,14)],"#be70ff")
-def sternenbogen(s):
-    s.l([(5,5),(24,26)],"#25203b",1)
-    s.p([(7,2),(13,5),(20,11),(23,19),(26,28),(23,30),(17,25),(14,21)],"#453266")
-    s.p([(8,4),(12,7),(18,12),(20,19),(24,27),(22,28),(17,23),(15,19)],"#d69c42")
-    s.p([(8,4),(10,8),(13,13),(12,19),(10,23),(6,27),(4,28),(5,23),(8,16)],"#3c315e")
-    s.p([(8,6),(10,9),(11,16),(8,23),(5,26),(7,21),(9,15)],"#edb84f")
-    s.l([(8,5),(23,27)],"#b6edff",1)
-    s.l([(7,24),(22,10)],"#153f70",3)
-    s.l([(8,23),(22,10)],"#75eeff",1)
-    s.p([(19,9),(22,7),(25,9),(22,13)],"#ffee9b")
-    s.shine([(15,7),(18,4),(26,15),(12,26)],"#f9deff")
-def gravitationsbrecher(s):
-    s.l([(7,29),(18,15)],"#16182a",7)
-    s.l([(8,28),(18,15)],"#8462a1",4)
-    s.l([(10,26),(17,18)],"#f0baff",1)
-    s.p([(14,4),(24,3),(29,8),(28,18),(23,23),(13,22),(8,17),(9,8)],"#0c1021")
-    s.p([(13,6),(23,5),(27,9),(26,17),(22,21),(14,20),(10,16),(11,9)],"#45395c")
-    s.p([(15,7),(22,6),(26,10),(24,17),(21,19),(14,18),(12,14)],"#7659a7")
-    s.p([(17,9),(20,7),(23,11),(22,16),(18,17),(15,14)],"#381a6e")
-    s.p([(18,10),(20,10),(23,13),(20,16),(17,15),(16,13)],"#dc5dff")
-    s.r((11,9,12,13),"#161526");s.r((26,10,28,14),"#171324")
-    s.r((15,3,18,6),"#21162c");s.r((19,20,23,23),"#27182f")
-    s.shine([(20,11),(18,13),(28,5),(8,6),(25,22)],"#ffd3ff")
-
-ART=[trichterherz,schmiedekern,haendlervertrag,titanfaust,abyss_dreizack,raketenwerfer,krabbenschere,dimensionsklinge,sternenbogen,gravitationsbrecher]
-
 def render_items(files):
-    for name,paint in zip(NAMES,ART):
-        sprite=Sprite()
-        paint(sprite)
-        png=sprite.output()
-        files["assets/axoria/textures/item/"+name+".png"]=png
+    atlas_data=base64.b64decode(Path("premium_item_atlas.png.b64").read_text(encoding="ascii").strip(),validate=True)
+    atlas=Image.open(BytesIO(atlas_data)).convert("RGBA")
+    if atlas.size!=(64,640):
+        raise ValueError("Custom item atlas must be 64x640 (ten 64x64 sprites)")
+    for index,name in enumerate(NAMES):
+        sprite=atlas.crop((0,index*64,64,(index+1)*64))
+        alpha={pixel[3] for pixel in sprite.getdata()}
+        if alpha!={0,255}:
+            raise ValueError(name+" must have opaque pixels and a transparent exterior, no half alpha")
+        output=BytesIO()
+        sprite.save(output,format="PNG",optimize=True)
+        files["assets/axoria/textures/item/"+name+".png"]=output.getvalue()
         files["assets/axoria/models/item/"+name+".json"]=json.dumps({
             "parent":"minecraft:item/generated",
             "textures":{"layer0":"axoria:item/"+name}
