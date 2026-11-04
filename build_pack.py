@@ -100,62 +100,18 @@ files["assets/axoria/models/item/eissense.json"] = json.dumps({
 # Three individually readable crate-key rarities. Every painted pixel is
 # fully opaque (alpha 255); only the exterior silhouette is transparent.
 # Never recolor or replace Minecraft's normal trial_key outside CustomModelData.
-from PIL import ImageDraw
 def create_axoria_key_png(tier):
-    themes = {
-        "normal": ("#192635", "#758da5", "#e4f5ff", "#31b9e3", "#215672"),
-        "epic": ("#291737", "#8350b4", "#e8c3ff", "#d85fff", "#603482"),
-        "legendary": ("#563013", "#edac35", "#fff3a2", "#ff4d57", "#a65a16")
-    }
-    outline, metal, shine, crystal, shadow = themes[tier]
-    canvas=Image.new("RGBA",(32,32),(0,0,0,0))
-    d=ImageDraw.Draw(canvas)
-    # A stout pixel-art shaft with two key teeth, visible even at 16px.
-    d.rectangle((13,16,20,28),fill=outline)
-    d.rectangle((15,16,18,27),fill=metal)
-    d.rectangle((16,18,16,25),fill=shine)
-    d.rectangle((19,22,25,25),fill=outline)
-    d.rectangle((19,23,23,24),fill=metal)
-    d.rectangle((19,27,24,30),fill=outline)
-    d.rectangle((19,28,22,29),fill=metal)
-    # Outer jeweled key head with a solid, shaded center (no interior holes).
-    d.polygon([(10,3),(22,3),(27,8),(27,15),(21,20),
-               (11,20),(5,15),(5,9)],fill=outline)
-    d.polygon([(11,5),(21,5),(25,9),(25,14),(20,18),
-               (12,18),(7,14),(7,10)],fill=metal)
-    d.polygon([(11,6),(21,6),(24,10),(22,15),(19,17),
-               (12,17),(8,13),(8,10)],fill=shadow)
-    d.polygon([(15,7),(19,7),(23,11),(20,15),(16,17),
-               (11,13),(11,10)],fill=crystal)
-    d.polygon([(15,8),(18,8),(20,10),(16,13),(13,11)],fill=shine)
-    d.rectangle((12,7,13,8),fill=shine)
-    if tier=="epic":
-        # Purple arcane finials and a brighter magenta core.
-        d.polygon([(5,10),(2,7),(3,14),(7,16)],fill=outline)
-        d.polygon([(27,10),(30,7),(29,14),(25,16)],fill=outline)
-        d.rectangle((15,12,19,14),fill="#faacff")
-        d.rectangle((6,10,7,12),fill=crystal)
-        d.rectangle((25,10,26,12),fill=crystal)
-    elif tier=="legendary":
-        # Gold crown, scarlet gem, flame-like gold fins.
-        d.polygon([(9,5),(7,0),(12,3),(16,1),(20,3),(25,0),
-                   (23,6)],fill=outline)
-        d.polygon([(10,4),(9,2),(13,5),(16,3),(20,5),(23,2),
-                   (22,5)],fill=shine)
-        d.rectangle((15,9,19,12),fill="#ff183a")
-        d.rectangle((16,9,17,10),fill="#fff3ac")
-        d.rectangle((6,10,7,13),fill=shine)
-        d.rectangle((24,10,25,13),fill=shine)
-    else:
-        # Inlaid steel bolts distinguish the common key at a glance.
-        d.rectangle((9,11,10,12),fill=shine)
-        d.rectangle((22,11,23,12),fill=shine)
-    alphas={pixel[3] for pixel in canvas.getdata()}
-    if not alphas.issubset({0,255}):
-        raise ValueError("A crate key has partially transparent pixels")
-    output=BytesIO()
-    canvas.save(output,"PNG",optimize=True)
-    return output.getvalue()
+    # Source sprites are taken from the previously approved Axoria key
+    # comparison illustration and hand-prepared as crisp 64x64 item sprites.
+    # The silhouette remains pixel-sharp with no partially transparent pixels.
+    raw=base64.b64decode(Path("axoria_key_"+tier+".png.b64").read_text().strip())
+    image=Image.open(BytesIO(raw)).convert("RGBA")
+    if image.size!=(64,64):
+        raise ValueError("Axoria "+tier+" key texture must be exactly 64x64")
+    alphas={a for *_,a in image.getdata()}
+    if not alphas.issubset({0,255}) or 0 not in alphas or 255 not in alphas:
+        raise ValueError("Axoria "+tier+" key must have opaque sprite pixels and a transparent exterior")
+    return raw
 
 for rarity in ("normal","epic","legendary"):
     texture_name="axoria_key_"+rarity
