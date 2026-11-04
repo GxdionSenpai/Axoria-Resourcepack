@@ -4,7 +4,7 @@ import json
 from PIL import Image, ImageDraw
 
 NAMES=["trichterherz","schmiedekern","haendlervertrag","titanfaust","abyss_dreizack","raketenwerfer","krabbenschere","dimensionsklinge","sternenbogen","gravitationsbrecher"]
-BASE=["hopper","blast_furnace","paper","netherite_hoe","trident","crossbow","shears","netherite_sword","bow","mace"]
+BASE=["hopper","magma_cream","paper","netherite_hoe","trident","crossbow","shears","netherite_sword","bow","mace"]
 
 class Sprite:
     def __init__(self):
