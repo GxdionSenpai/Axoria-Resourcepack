@@ -33,6 +33,9 @@ with zipfile.ZipFile(source) as source_zip:
     assert source_zip.testzip() is None
     assert "pack.mcmeta" in source_zip.namelist()
     files = {name: source_zip.read(name) for name in source_zip.namelist() if not name.endswith("/")}
+# Vanilla high furnace item rendering must never be overridden by a special
+# item model. Schmiedekern now uses non-placeable MAGMA_CREAM instead.
+files.pop("assets/minecraft/items/blast_furnace.json",None)
 # The approved cyan/black scythe art is stored losslessly in this
 # repository as base64, keeping the source PNG available to the builder.
 # In-game the silhouette has strictly 0/255 alpha (no semi-transparent
