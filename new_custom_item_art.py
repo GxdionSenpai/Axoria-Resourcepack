@@ -10,7 +10,15 @@ NAMES=["trichterherz","schmiedekern","haendlervertrag","titanfaust","abyss_dreiz
 BASE=["heart_of_the_sea","magma_cream","paper","netherite_hoe","trident","carrot_on_a_stick","shears","netherite_sword","bow","mace"]
 
 def render_items(files):
-    atlas_data=base64.b64decode(Path("premium_item_atlas.png.b64").read_text(encoding="ascii").strip(),validate=True)
+    # Ten freshly generated detailed sprites, pixelized at EXACT 64x64.
+    # The atlas is stored in short ASCII chunks to keep GitHub text commits
+    # reliable; verify the original PNG checksum before publishing.
+    import zlib
+    encoded="".join((Path("premium_generated_atlas")/("part"+str(n)+".b64")).read_text(
+        encoding="ascii").strip() for n in range(5))
+    atlas_data=base64.b64decode(encoded,validate=True)
+    if zlib.crc32(atlas_data)!=1974434469:
+        raise ValueError("Generated Axoria item atlas has failed checksum verification")
     atlas=Image.open(BytesIO(atlas_data)).convert("RGBA")
     if atlas.size!=(64,640):
         raise ValueError("Custom item atlas must be 64x640 (ten 64x64 sprites)")
