@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 NAMES=["trichterherz","schmiedekern","haendlervertrag","titanfaust","abyss_dreizack","raketenwerfer","krabbenschere","dimensionsklinge","sternenbogen","gravitationsbrecher"]
 # Schmiedekern must never inherit a placeable furnace block model.
-BASE=["heart_of_the_sea","magma_cream","paper","netherite_hoe","trident","crossbow","shears","netherite_sword","bow","mace"]
+BASE=["heart_of_the_sea","magma_cream","paper","netherite_hoe","trident","carrot_on_a_stick","shears","netherite_sword","bow","mace"]
 
 def render_items(files):
     atlas_data=base64.b64decode(Path("premium_item_atlas.png.b64").read_text(encoding="ascii").strip(),validate=True)
