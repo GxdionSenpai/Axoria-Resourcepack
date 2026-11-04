@@ -138,6 +138,11 @@ for rarity in ("normal","epic","legendary"):
         "textures":{"layer0":"axoria:item/"+texture_name}
     },separators=(",",":")).encode()
 
+# Ten handcrafted solid-pixel 64x64 Axoria item sprites.
+from new_custom_item_art import render_items, NAMES as NEW_NAMES, BASE as NEW_BASE
+render_items(files)
+items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_NAMES)))
+
 # These exact IDs match AxoriaCrates.keyTextureId(). Unmarked vanilla
 # TRIAL_KEYs, and all players who decline the entire pack, stay vanilla.
 trial_key_fallback={"type":"minecraft:model","model":"minecraft:item/trial_key"}
@@ -164,44 +169,33 @@ for plain, texture in (("clock", "clock_00"),):
         "textures": {"layer0": "minecraft:item/" + texture}
     }, separators=(",", ":")).encode()
 
-for base, custom, value in items:
-    # When no pack is active, the client always uses Minecraft's native item model.
-    # When Axoria is active, only the numeric CustomModelData selects the custom model.
-    vanilla = ("axoria:item/vanilla_clock" if base == "clock" else "minecraft:item/" + base)
-    vanilla_model = {"type": "minecraft:model", "model": vanilla}
-    if base == "chest":
-        # A chest is a special block-entity item, NOT an ordinary JSON item
-        # model. Falling back to minecraft:model / minecraft:item/chest renders
-        # normal chests as invisible/missing items when the pack is enabled.
-        # Keep the vanilla normal/christmas chest rendering intact.
+# One dispatch per vanilla item: preserve all pre-existing magic item models
+# even if several Axoria items share the same base (e.g. both custom shears).
+grouped={}
+for base,custom,value in items:
+    grouped.setdefault(base,[]).append((custom,value))
+for base, models in grouped.items():
+    vanilla = ("axoria:item/vanilla_clock" if base=="clock" else "minecraft:item/"+base)
+    vanilla_model={"type":"minecraft:model","model":vanilla}
+    if base=="chest":
         def chest_model(texture):
-            return {
-                "type": "minecraft:special",
-                "base": "minecraft:item/chest",
-                "model": {"type": "minecraft:chest", "texture": "minecraft:" + texture}
-            }
-        vanilla_model = {
-            "type": "minecraft:select",
-            "property": "minecraft:local_time",
-            "pattern": "MM-dd",
-            "cases": [
-                {"when": ["12-24", "12-25", "12-26"], "model": chest_model("christmas")}
-            ],
-            "fallback": chest_model("normal")
-        }
-    model = {
-        "model": {
-            "type": "minecraft:range_dispatch",
-            "property": "minecraft:custom_model_data",
-            "index": 0,
-            "fallback": vanilla_model,
-            "entries": [
-                {"threshold": value, "model": {"type": "minecraft:model", "model": "axoria:item/" + custom}},
-                {"threshold": value + 0.5, "model": vanilla_model}
-            ]
-        }
-    }
-    files["assets/minecraft/items/" + base + ".json"] = json.dumps(model, separators=(",", ":")).encode()
+            return {"type":"minecraft:special","base":"minecraft:item/chest",
+                    "model":{"type":"minecraft:chest","texture":"minecraft:"+texture}}
+        vanilla_model={"type":"minecraft:select","property":"minecraft:local_time",
+            "pattern":"MM-dd","cases":[{"when":["12-24","12-25","12-26"],
+                "model":chest_model("christmas")}],
+            "fallback":chest_model("normal")}
+    entries=[]
+    for custom,value in sorted(models,key=lambda pair:pair[1]):
+        entries.append({"threshold":value,"model":{"type":"minecraft:model",
+            "model":"axoria:item/"+custom}})
+        entries.append({"threshold":value+0.5,"model":vanilla_model})
+    files["assets/minecraft/items/"+base+".json"]=json.dumps({
+        "model":{"type":"minecraft:range_dispatch",
+                 "property":"minecraft:custom_model_data",
+                 "index":0,"fallback":vanilla_model,"entries":entries}
+    },separators=(",",":")).encode()
+
 def repair_enclosed_holes(png_bytes):
     """Fill only enclosed transparent gaps; preserve the exterior silhouette."""
     image = Image.open(BytesIO(png_bytes)).convert("RGBA")
