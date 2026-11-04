@@ -145,6 +145,8 @@ for rarity in ("normal","epic","legendary"):
 from new_custom_item_art import render_items, NAMES as NEW_NAMES, BASE as NEW_BASE
 render_items(files)
 items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_NAMES)))
+# Bright bow model for charged starshot after five hits.
+items.append(("bow","sternenbogen_charged",1111))
 
 # These exact IDs match AxoriaCrates.keyTextureId(). Unmarked vanilla
 # TRIAL_KEYs, and all players who decline the entire pack, stay vanilla.
