@@ -251,6 +251,15 @@ def repair_enclosed_holes(png_bytes):
 # Repair accidental fully enclosed holes in all item texture PNGs.
 for path, data in list(files.items()):
     if path.startswith("assets/axoria/textures/item/") and path.endswith(".png"):
+        # Preserve intentional transparent holes, especially the OPEN space
+        # between Sternenbogen's bow limbs and string, the crab claw opening
+        # and the rocket's actual muzzle. The old generic "fill enclosed holes"
+        # pass destroyed these important original art details.
+        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"}:
+            image=Image.open(BytesIO(data)).convert("RGBA")
+            if image.size!=(128,128) or {a for *_,a in image.getdata()}!={0,255}:
+                raise ValueError("Custom Axoria 128px item texture invalid: "+path)
+            continue
         try:
             files[path] = repair_enclosed_holes(data)
         except Exception as exc:
