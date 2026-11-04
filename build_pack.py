@@ -23,6 +23,7 @@ items = [
     ("diamond_hoe", "eissense", 1010),
     ("stone_axe", "holzfaelleraxt", 1011),
     ("chest", "backpack", 1012),
+    ("book", "skyblock_menu_book", 1016),
 ]
 source = Path("source-pack.zip")
 if not source.is_file():
@@ -90,6 +91,22 @@ files["assets/axoria/models/item/backpack.json"] = json.dumps({
     "parent": "minecraft:item/generated",
     "textures": {"layer0": "axoria:item/backpack"}
 }, separators=(",", ":")).encode()
+
+# Permanent Skyblock menu book (CustomModelData 1016).
+# 64x64 opaque silhouette extracted from the approved Axoria artwork.
+# Empty exterior pixels are alpha 0; no partial-alpha pixels are allowed.
+skyblock_menu_png=base64.b64decode(Path("skyblock_menu_book.png.b64").read_text().strip())
+skyblock_menu_image=Image.open(BytesIO(skyblock_menu_png)).convert("RGBA")
+if skyblock_menu_image.size!=(64,64):
+    raise ValueError("Skyblock menu book must be a 64x64 sprite")
+skyblock_menu_alphas={alpha for *_,alpha in skyblock_menu_image.getdata()}
+if skyblock_menu_alphas!={0,255}:
+    raise ValueError("Skyblock menu book requires only 0 and 255 alpha")
+files["assets/axoria/textures/item/skyblock_menu_book.png"]=skyblock_menu_png
+files["assets/axoria/models/item/skyblock_menu_book.json"]=json.dumps({
+    "parent":"minecraft:item/generated",
+    "textures":{"layer0":"axoria:item/skyblock_menu_book"}
+},separators=(",",":")).encode()
 
 files["assets/axoria/textures/item/eissense.png"] = create_eissense_png()
 files["assets/axoria/models/item/eissense.json"] = json.dumps({
