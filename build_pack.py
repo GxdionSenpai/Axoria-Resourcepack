@@ -84,11 +84,192 @@ if timber_model not in files:
 
 # Backpack sprite: transparent exterior (alpha 0), solid pixels only (alpha 255).
 # Semitransparent pixels are never allowed, avoiding visible halos in Minecraft.
-backpack_png = base64.b64decode(Path("backpack.png.b64").read_text().strip())
+# Exact approved 128x128 Axoria backpack sprite, losslessly compressed.
+# Palette: 33 RGBA entries, followed by 16384 pixel indices.
+import zlib
+_backpack_data = zlib.decompress(base64.b85decode("c-rln&5kQM6@YX5c2zpAireXN%CYMwkw6H<XvBh9AwXg=GjG5Gi3KafjtvM{^As#u^B_pP1<wJ+`LSKDO46yi-AJ>@xk}$k*>ygjWBd5nmDP%*U#-4@|Gw#^`(g#3UVZVaUjOtDz5D8~eZASN;L~@{+ZBBJ?<ui@PyhXw?Fv5q4>s!+eEKgByA^!;FTeg>|Mhq3{+B;I_P_q^U;5wt=)3*zfBbp>=bwGv|LvQf^#A(fFZzG~{pbCE{_$1+-+%t8U)|*{ce%@5?sAuJqkOj7%0#wsV_v;?lHE#;1a7>k-f|Hmd3(J@^8CE9b#0Bc)|eWuHqXzO>TN&6dNoxu_Ikagy|1)rPp7USIi60f(CSh}u6N{m9oPHh9(Z_+A{FR8dVY62HA1P!3!*0V+Ht)l^v8$CEDGrj_LE&oWfz3&9k0}Te0W&Yf|1^)>)M*6?T*bAeo6JZP_G-;TVg+WD_^hIPb^B6$akpLvEFPb^#V82cKUj1D9vYg!2>!!ho=rKS`K`+OJ+l<7r2qh3BOc&D9ynK4>S8<!e{&I%Y3|g!oR>TU*|v0cYdC@m-&r#FtaV_txJ_XT@c{c=qD80v@P<J;(S&YJgmS^Ywoh4|7*~O@yDWG<gZyK{SW-Mwa#%p;3xf$e?j#p@HO)ZZ`+hVv7h;5zHjGS_)pjQ`XV3eUGe`ye$J10@&4!j_jctZL!C8zOZ&<AdP9Y!{G4>=gWlM$#Lx0G34D?|Z71sTQ}9iE_G_Z|I={KVf3y8@T$Na9D&>3Hzh-_`k|?coMWVGXv+DxIz8*YMma;5G#(Wq7i}*aIvY5;$)~m#8_^cf2d3hmz{z-he6q=@;DT7}5I$uUU$14T=EawTZfX~Liz>;Q9u%;i6-v36wT#UUj2EBN`mfaC@rIUe0Q1K90z~`|CD?jsLRadIgY}f02@V~}Epd>uRe5t}1T*`;c>jT^0N%4Xr<SqN<3s-z#!/usr/bin/env python3
+"""Build Axoria resourcepack with vanilla fallbacks for CustomModelData."""
+import hashlib
+import json
+from pathlib import Path
+import zipfile
+import struct
+import zlib
+from io import BytesIO
+from collections import deque
+from PIL import Image
+
+items = [
+    ("clock", "zeitstab", 1001),
+    ("iron_pickaxe", "gluecks_spitzhacke", 1002),
+    ("shears", "gaertnerschere", 1003),
+    ("blaze_rod", "flammenstab", 1004),
+    ("fishing_rod", "enterhaken", 1005),
+    ("feather", "phoenix_feder", 1006),
+    ("spyglass", "monster_lupe", 1007),
+    ("stick", "blitzstab", 1008),
+    ("snowball", "frostkugel", 1009),
+    ("diamond_hoe", "eissense", 1010),
+    ("stone_axe", "holzfaelleraxt", 1011),
+    ("chest", "backpack", 1012),
+    ("book", "skyblock_menu_book", 1016),
+]
+source = Path("source-pack.zip")
+if not source.is_file():
+    raise SystemExit("Upload source-pack.zip first")
+out = Path("axoria-resourcepack.zip")
+with zipfile.ZipFile(source) as source_zip:
+    assert source_zip.testzip() is None
+    assert "pack.mcmeta" in source_zip.namelist()
+    files = {name: source_zip.read(name) for name in source_zip.namelist() if not name.endswith("/")}
+# Vanilla high furnace item rendering must never be overridden by a special
+# item model. Schmiedekern now uses non-placeable MAGMA_CREAM instead.
+files.pop("assets/minecraft/items/blast_furnace.json",None)
+# The approved cyan/black scythe art is stored losslessly in this
+# repository as base64, keeping the source PNG available to the builder.
+# In-game the silhouette has strictly 0/255 alpha (no semi-transparent
+# item pixels), and the exterior remains transparent.
+import base64
+def create_eissense_png():
+    raw = base64.b64decode(Path("eissense.png.b64").read_text().strip())
+    image = Image.open(BytesIO(raw)).convert("RGBA")
+    if image.size != (32, 32):
+        raise ValueError("Eissense texture must be exactly 32x32")
+    alphas = {a for *_, a in image.getdata()}
+    if not alphas.issubset({0, 255}):
+        raise ValueError("Eissense must have full pixels with binary alpha")
+    return raw
+
+# Restore the special Holzfälleraxt as a pack-only texture; players without
+# the pack get the ordinary stone axe via vanilla's default item model.
+# Preserve any existing source-pack timber artwork rather than overwriting it.
+timber_texture = "assets/axoria/textures/item/holzfaelleraxt.png"
+timber_model = "assets/axoria/models/item/holzfaelleraxt.json"
+if timber_texture not in files:
+    from PIL import ImageDraw
+    canvas = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(canvas)
+    # Original-style wooden handle with an iron axe head. Every actual sprite
+    # pixel is fully opaque, leaving only the empty background transparent.
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#181c29", width=6)
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#81522e", width=4)
+    d.line([(7, 28), (12, 23), (16, 18), (20, 13)], fill="#bf8242", width=1)
+    d.polygon([(14, 12), (19, 5), (24, 3), (28, 4), (31, 8), (27, 14),
+               (22, 19), (17, 18)], fill="#1c2533")
+    d.polygon([(17, 12), (21, 6), (25, 5), (29, 7), (27, 12),
+               (22, 17), (18, 16)], fill="#607789")
+    d.polygon([(19, 10), (23, 6), (28, 7), (26, 11), (22, 15)],
+              fill="#98b5c3")
+    d.line([(23, 6), (28, 7), (26, 11)], fill="#e0eff3", width=1)
+    d.polygon([(17, 14), (20, 11), (23, 14), (20, 17)], fill="#2d394b")
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    files[timber_texture] = output.getvalue()
+if timber_model not in files:
+    files[timber_model] = json.dumps({
+        "parent": "minecraft:item/handheld",
+        "textures": {"layer0": "axoria:item/holzfaelleraxt"}
+    }, separators=(",", ":")).encode()
+
+# Backpack sprite: transparent exterior (alpha 0), solid pixels only (alpha 255).
+# Semitransparent pixels are never allowed, avoiding visible halos in Minecraft.
+>PL_g)HZj|D|pr-#K=$g6>0<%h#{*lc)#}LBGL-Tx35k{*TyR98E73XaGN+h5E}fuC`w9;ZbxQWnrxHaZ&OokPjN>;c>xARwd-q)5DBekbez)Ske-u6QoaWV#$Qh_RGMZmw!D(`=#!V-9GoZXp(cpRS$-E=Q})4>hR^hX<Fc`$X`9o-h33egB8dR_z9nGGoPo+c^f^Scf-Z9EyyPF_xXBcKV9Z~m=X|HTjKj~ukp*xvi%p>uN3<~^e8IcgOIa9aRXrJVdOV}$<uOrAow3dmc?SevBrV=eLnDWh$yEbackpack_png = base64.b64decode(Path("backpack.png.b64").read_text().strip())Sp?tfBaY@AODAmj(7K5p75a@R^tl%znG892m9ai0pRtc#V{{G`{9ZIKepL>^TB?L_OCDUJDS`#!/usr/bin/env python3
+"""Build Axoria resourcepack with vanilla fallbacks for CustomModelData."""
+import hashlib
+import json
+from pathlib import Path
+import zipfile
+import struct
+import zlib
+from io import BytesIO
+from collections import deque
+from PIL import Image
+
+items = [
+    ("clock", "zeitstab", 1001),
+    ("iron_pickaxe", "gluecks_spitzhacke", 1002),
+    ("shears", "gaertnerschere", 1003),
+    ("blaze_rod", "flammenstab", 1004),
+    ("fishing_rod", "enterhaken", 1005),
+    ("feather", "phoenix_feder", 1006),
+    ("spyglass", "monster_lupe", 1007),
+    ("stick", "blitzstab", 1008),
+    ("snowball", "frostkugel", 1009),
+    ("diamond_hoe", "eissense", 1010),
+    ("stone_axe", "holzfaelleraxt", 1011),
+    ("chest", "backpack", 1012),
+    ("book", "skyblock_menu_book", 1016),
+]
+source = Path("source-pack.zip")
+if not source.is_file():
+    raise SystemExit("Upload source-pack.zip first")
+out = Path("axoria-resourcepack.zip")
+with zipfile.ZipFile(source) as source_zip:
+    assert source_zip.testzip() is None
+    assert "pack.mcmeta" in source_zip.namelist()
+    files = {name: source_zip.read(name) for name in source_zip.namelist() if not name.endswith("/")}
+# Vanilla high furnace item rendering must never be overridden by a special
+# item model. Schmiedekern now uses non-placeable MAGMA_CREAM instead.
+files.pop("assets/minecraft/items/blast_furnace.json",None)
+# The approved cyan/black scythe art is stored losslessly in this
+# repository as base64, keeping the source PNG available to the builder.
+# In-game the silhouette has strictly 0/255 alpha (no semi-transparent
+# item pixels), and the exterior remains transparent.
+import base64
+def create_eissense_png():
+    raw = base64.b64decode(Path("eissense.png.b64").read_text().strip())
+    image = Image.open(BytesIO(raw)).convert("RGBA")
+    if image.size != (32, 32):
+        raise ValueError("Eissense texture must be exactly 32x32")
+    alphas = {a for *_, a in image.getdata()}
+    if not alphas.issubset({0, 255}):
+        raise ValueError("Eissense must have full pixels with binary alpha")
+    return raw
+
+# Restore the special Holzfälleraxt as a pack-only texture; players without
+# the pack get the ordinary stone axe via vanilla's default item model.
+# Preserve any existing source-pack timber artwork rather than overwriting it.
+timber_texture = "assets/axoria/textures/item/holzfaelleraxt.png"
+timber_model = "assets/axoria/models/item/holzfaelleraxt.json"
+if timber_texture not in files:
+    from PIL import ImageDraw
+    canvas = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(canvas)
+    # Original-style wooden handle with an iron axe head. Every actual sprite
+    # pixel is fully opaque, leaving only the empty background transparent.
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#181c29", width=6)
+    d.line([(7, 29), (11, 24), (15, 19), (19, 14), (23, 9)], fill="#81522e", width=4)
+    d.line([(7, 28), (12, 23), (16, 18), (20, 13)], fill="#bf8242", width=1)
+    d.polygon([(14, 12), (19, 5), (24, 3), (28, 4), (31, 8), (27, 14),
+               (22, 19), (17, 18)], fill="#1c2533")
+    d.polygon([(17, 12), (21, 6), (25, 5), (29, 7), (27, 12),
+               (22, 17), (18, 16)], fill="#607789")
+    d.polygon([(19, 10), (23, 6), (28, 7), (26, 11), (22, 15)],
+              fill="#98b5c3")
+    d.line([(23, 6), (28, 7), (26, 11)], fill="#e0eff3", width=1)
+    d.polygon([(17, 14), (20, 11), (23, 14), (20, 17)], fill="#2d394b")
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    files[timber_texture] = output.getvalue()
+if timber_model not in files:
+    files[timber_model] = json.dumps({
+        "parent": "minecraft:item/handheld",
+        "textures": {"layer0": "axoria:item/holzfaelleraxt"}
+    }, separators=(",", ":")).encode()
+
+# Backpack sprite: transparent exterior (alpha 0), solid pixels only (alpha 255).
+# Semitransparent pixels are never allowed, avoiding visible halos in Minecraft.
+#PSaxXKbge-Hi^`PRk$_u&`PpBBd4;bTK{n`eKAF|y4Nj>SF#$Np#j<`ekFfoV9Np4JKf6!-u|Gh4p=co_KHf)Rg_{kxs_f8YoE9c=9rJ~p8BS8P9&hZSgI|8CJ)$X2N-pH{IfBNwzmnkHW2-Nq-T7x+sC-xd$@X#7$CqyKYUP$9}>U?FsY-wqGbu<=0WdQ<<)Z85V8cB=v+k1?)xHIIMd@59{B$kP|(K*q;8xc1}Ufg)qIRK>gl!5vOM4e+LJy#4ExpI_&XVo>0NZ$O#G1JRj$@V<6<-jVWi?qhUwdzp^~EzbcAS_8kXodf%~^X)Iu{tJBOwBgTyrms!7ZU_61@4)Ba*YMn9H0&=@KJ1aue!6bL9Q5O_ZrJ}z`0Rfee+eJ+H=1qef2~!@r>`x~Mb7pTKAi|G<>M)CWjb0{DgM&Pi~NfCJnM<CBR`%Ecs_1htX;%c$hW4#^#@~oJY?A89wdWE3%g6)U7%$KyF+Ol|5&;o_$|f8<@{~R_aQK(|LEN~|M;vmo&Q;KFtX=`@jduYJ_NKJ<szTDW0-$f(w+`)=1b-q&woloP@ByEwvCgL=RaKs{?ps}bdnzSU!LDwk3Y@8hm`aHtp^2xKRf>Ig8z*vg>2&x$oJ&#*W$k$f)5+7L^;?$cL_$mBR)7H;Zq25zz0t^yz=6mmWN@xhZ4L<_#I$z9((`K&ivyshV=Fy_6Od;W?>SXODKWyzuzCc{fQ<yD+?-^uSwtv{`w}w6S14(ogWo|5MRyY!;ZnXTB-36m?N?Cr6^NPGu}xSAW~T0qbT*z1?&ARK2#f=Uk{oZE7Z2w7B`I-Hsp3FDs%xf;t-EHAls$9TF&MKIVDYlOHJ`W#@Y|tr||KTSEZ&LVOtU!HH!lybA_?gWC^28$%iK$#?<J2~h_;@U0Ny7GDWd+tg_d&BE9PBmRl_C+26KADj;lRmP;68taUBeHH>A&u}4Q<D?cpGz6d(*aac$u4|uJP(^4O<ijBo?|9Dz{JLq91R32>&*3L6=11`;KnUJ)QB-MZWp67lc#U_4a)I72-6%oF2GsNHPX(Mn=b6|Aywwc+uHv)qs$+f^E3|wLJL<=Qzk8JrTdbPjbwt7RsT57?cY1Bd{%`q+*BS5sE>>uS&~#islA5RB4L+=S&Wr`TS1D+LDETY}=O`XI7)otxgNGpk3rNuST2)XqQ3E@QdHl(P_*UO&JbI^IB>?j={esO6WZAWlcwcZ6Bsw2|GcYluvE^JouD^WrPWBs!pk?yoj)9N%cWi$w9QgcW1Xcq*JBtq%nL4iOHu9wm171tf;P|(!pZPkJN*Vb!s;SZc^)3E3;Zs~Y9WDER#IL}946%Ov<4f5Q9|k}DQp32T50K2i+5cNr!h_CK3BQW=tHgffa|c;7;d4cL$PWAp?KiXLA51Si(Zg6q+c%8Dq&5yE;&(xJNBk-j65nw2>b#m`Lu%ZO__K}i2U5q1Jj;Q@5})5eLUdrhUwe+shubtB9rJks!~EA&4XJ4<{ua0S{y~1-&JPB@k2sh3#ur-R+f+@;zmbA$oc{qyhr_$2<Adn`5Xn5h<7nKae8+rkc=^Cl!uFFIx4D&jOI+_Ip8U7E(y*pz!TBKOPu{`K;wvT{I~*?I20Did73OagE${%F)f_8<i<p$J=is#W!UvhJkS|dmbRt~Xu$a*c#yA}ny`H2Hj{%v-KQ_Ab{08}`SjpAy=H3VLEoFjZk&o8Wu#S9<3!)Co6WE4)7=M9}KEa%~ifRnyWApeG?)(QnPHgZp+V7(MT8V*QDrgX1VVUKLN?}3|{EANDZu0Tqe-7X1$hVciDrbD7%Q0Wg;Dh}*&4*P>g{3t3pQbrFU2{x<$ssfyvZVf}MO*4PL=6wj?HoSx1g++<*6WLW2mESC>?=3rTS^*K=|vbWkaPKd+k~UYFQt+1uJFnKO=>^RS}*v04!>Z&o8%v!@2>G{J}(>l-;R=>`FuCZ-H_i{KmMZB6Fy6b|IBye9MaC^+ezwpgWq1_LmJVzNfJ9}{CWEm>q!;!-3&hZU-Qw8GiUsA24DK>b?8ydasB$^!U`PvpEq{g|7<_6f8>8xdo`}6A7jk)zaMjP^MoOe^AF<lpd8t+eUqtq9RJ}e-Tqjb!LnH0UVj2V3Xb-aPu;@thjv!xGT)8)7Ww6z`0uBS-vBnqH*|tw>@YOO<3Hlj|9IwMCVV%`eth>+Z1Lwtlf8?kMUYo~S`Mlz=9^WL3UG0CQGwbP#q+!qFriH~5>?7-DmwheNS_rcA<rt$eg}>xaMR|e$ym6?+4K_{PQ4M_Tm<xO5B2J%uIe!lqF?U^h=(2e0FAK4DQnsUE#W=#~R8-@8ApCX3~z5K4qeChRFDM(6Z?L?`BuXGg-txlVZ17@&dLfQy~i$@x9~1j$ADL{lf*HloLt4TMqq1vRS>mFkj+7Is)-04RYEnyd(b~d@{4VAR@W#uZq=O?sAvA+~wOX{{ufZ(Bu"))
+_backpack_palette = [_backpack_data[i:i+4] for i in range(0,132,4)]
+_backpack_pixels = b"".join(_backpack_palette[index] for index in _backpack_data[132:])
+backpack_image = Image.frombytes("RGBA", (128,128), _backpack_pixels)
+_backpack_output = BytesIO()
+backpack_image.save(_backpack_output,format="PNG",optimize=True)
+backpack_png = _backpack_output.getvalue()
 backpack_image = Image.open(BytesIO(backpack_png)).convert("RGBA")
 backpack_alpha = {a for *_, a in backpack_image.getdata()}
-if backpack_image.size != (32, 32) or not backpack_alpha.issubset({0, 255}) or backpack_alpha != {0, 255}:
-    raise ValueError("Backpack must be a 32x32 sprite with transparent background and opaque item pixels")
+if backpack_image.size != (128, 128) or not backpack_alpha.issubset({0, 255}) or backpack_alpha != {0, 255}:
+    raise ValueError("Backpack must be a 128x128 sprite with transparent background and opaque item pixels")
 files["assets/axoria/textures/item/backpack.png"] = backpack_png
 files["assets/axoria/models/item/backpack.json"] = json.dumps({
     "parent": "minecraft:item/generated",
