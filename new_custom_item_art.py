@@ -3,7 +3,7 @@ import base64
 import json
 from io import BytesIO
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 
 NAMES=["trichterherz","schmiedekern","haendlervertrag","titanfaust","abyss_dreizack","raketenwerfer","krabbenschere","dimensionsklinge","sternenbogen","gravitationsbrecher"]
 # Schmiedekern must never inherit a placeable furnace block model.
@@ -26,3 +26,27 @@ def render_items(files):
             "parent":"minecraft:item/generated",
             "textures":{"layer0":"axoria:item/"+name}
         },separators=(",",":")).encode()
+
+
+    # Distinct, much brighter charged Sternenbogen. The actual icon (not chat)
+    # switches automatically to this special 64px texture at 5/5 hits.
+    charged=atlas.crop((0,8*64,64,9*64))
+    draw=ImageDraw.Draw(charged)
+    # Pixel-hard 8-pointed gold star and four crystal sparks. No antialiasing.
+    gold="#ffe66a";core="#fffbd2";purple="#ec7aff"
+    draw.polygon([(53,3),(56,10),(63,12),(56,14),(53,21),(50,14),(43,12),(50,10)],fill=gold)
+    draw.polygon([(53,7),(55,12),(53,17),(51,12)],fill=core)
+    for x,y in ((10,7),(47,29),(21,50),(51,51)):
+        draw.rectangle((x-1,y-1,x+1,y+1),fill=purple)
+        draw.line([(x-3,y),(x+3,y)],fill=core,width=1)
+        draw.line([(x,y-3),(x,y+3)],fill=core,width=1)
+    charged_alpha={px[3] for px in charged.getdata()}
+    if charged_alpha!={0,255}:
+        raise ValueError("Charged Sternenbogen must have alpha 0/255 only")
+    output=BytesIO()
+    charged.save(output,format="PNG",optimize=True)
+    files["assets/axoria/textures/item/sternenbogen_charged.png"]=output.getvalue()
+    files["assets/axoria/models/item/sternenbogen_charged.json"]=json.dumps({
+        "parent":"minecraft:item/generated",
+        "textures":{"layer0":"axoria:item/sternenbogen_charged"}
+    },separators=(",",":")).encode()
