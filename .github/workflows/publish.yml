@@ -6,6 +6,7 @@ on:
       - 'source-pack.zip'
       - 'build_pack.py'
       - 'new_custom_item_art.py'
+      - 'premium_item_atlas.png.b64'
       - 'backpack.png.b64'
       - 'eissense.png.b64'
       - 'skyblock_menu_book.png.b64'
