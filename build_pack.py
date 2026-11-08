@@ -231,6 +231,30 @@ for base,custom,value in items:
 for base, models in grouped.items():
     vanilla = ("axoria:item/vanilla_clock" if base=="clock" else "minecraft:item/"+base)
     vanilla_model={"type":"minecraft:model","model":vanilla}
+    if base=="trident":
+        # Tridents do NOT have a generic flat item-model fallback when held.
+        # Vanilla uses a 2D item in GUI/ground/fixed, and a special 3D
+        # trident renderer in first/third person. Preserve both contexts.
+        # Without this, players see the purple/black missing model in hand.
+        trident_special=lambda base_name: {
+            "type":"minecraft:special",
+            "base":"minecraft:item/"+base_name,
+            "model":{"type":"minecraft:trident"}
+        }
+        vanilla_model={
+            "type":"minecraft:select",
+            "property":"minecraft:display_context",
+            "cases":[{
+                "when":["gui","ground","fixed"],
+                "model":{"type":"minecraft:model","model":"minecraft:item/trident"}
+            }],
+            "fallback":{
+                "type":"minecraft:condition",
+                "property":"minecraft:using_item",
+                "on_true":trident_special("trident_throwing"),
+                "on_false":trident_special("trident_in_hand")
+            }
+        }
     if base=="chest":
         def chest_model(texture):
             return {"type":"minecraft:special","base":"minecraft:item/chest",
