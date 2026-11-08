@@ -188,6 +188,11 @@ for item_name,vanilla_item,model_id in (
         "parent":"minecraft:item/generated",
         "textures":{"layer0":"axoria:item/"+item_name}
     },separators=(",",":")).encode()
+    # Direct minecraft:item_model component points here (modern clients).
+    # Keep the numerical CMD fallback below for older Season-1 item stacks.
+    files["assets/axoria/items/"+item_name+".json"]=json.dumps({
+        "model":{"type":"minecraft:model","model":"axoria:item/"+item_name}
+    },separators=(",",":")).encode()
     items.append((vanilla_item,item_name,model_id))
 if cursor!=len(weapon_bytes):
     raise ValueError("Invalid Guardian weapon art payload: trailing bytes")
