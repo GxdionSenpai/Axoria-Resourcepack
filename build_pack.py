@@ -156,6 +156,42 @@ items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
 
+# Approved Guardian Season 1 weapon sprites, looking right in the standard
+# Minecraft inventory orientation. The compact atlas stores three indexed
+# 64x64 sprites with binary transparency, then scales losslessly to 128x128.
+# Keeping the approved original art in the repository means pack releases
+# are deterministic and do not depend on a live image service.
+import zlib
+import base64
+weapon_bytes=zlib.decompress(base64.b85decode(
+    Path("season1_guardian_weapons.b85").read_text().strip()))
+cursor=0
+for item_name,vanilla_item,model_id in (
+    ("s1_gezeitenklinge","diamond_sword",1201),
+    ("s1_tiefenjaegerbogen","bow",1202),
+    ("s1_elderdreizack","trident",1203)):
+    palette_size=weapon_bytes[cursor];cursor+=1
+    palette=[(0,0,0,0)]
+    for _ in range(palette_size):
+        r,g,b=weapon_bytes[cursor:cursor+3];cursor+=3
+        palette.append((r,g,b,255))
+    index_bytes=weapon_bytes[cursor:cursor+64*64];cursor+=64*64
+    sprite=Image.new("RGBA",(64,64))
+    sprite.putdata([palette[index] for index in index_bytes])
+    sprite=sprite.resize((128,128),Image.Resampling.NEAREST)
+    if {a for *_,a in sprite.getdata()}!={0,255}:
+        raise ValueError("Season 1 texture must be strictly transparent/opaque: "+item_name)
+    out_buffer=BytesIO()
+    sprite.save(out_buffer,format="PNG",optimize=True)
+    files["assets/axoria/textures/item/"+item_name+".png"]=out_buffer.getvalue()
+    files["assets/axoria/models/item/"+item_name+".json"]=json.dumps({
+        "parent":"minecraft:item/generated",
+        "textures":{"layer0":"axoria:item/"+item_name}
+    },separators=(",",":")).encode()
+    items.append((vanilla_item,item_name,model_id))
+if cursor!=len(weapon_bytes):
+    raise ValueError("Invalid Guardian weapon art payload: trailing bytes")
+
 # These exact IDs match AxoriaCrates.keyTextureId(). Unmarked vanilla
 # TRIAL_KEYs, and all players who decline the entire pack, stay vanilla.
 trial_key_fallback={"type":"minecraft:model","model":"minecraft:item/trial_key"}
