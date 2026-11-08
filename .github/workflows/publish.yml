@@ -5,6 +5,7 @@ on:
     paths:
       - 'source-pack.zip'
       - 'build_pack.py'
+      - 'season1_guardian_weapons.b85'
       - 'new_custom_item_art.py'
       - 'premium_generated_atlas/axoria128_item_art.png'
       - 'premium_item_atlas.png.b64'
