@@ -338,6 +338,90 @@ for path, data in list(files.items()):
         except Exception as exc:
             raise RuntimeError("Invalid item PNG texture: " + path) from exc
 
+
+# Axoria GUI theme. Generated on each release; original item textures stay
+# untouched. Vanilla menu button geometry/click handling remains unchanged.
+from PIL import ImageDraw, ImageFont
+
+def axoria_gui_button(highlighted=False, disabled=False):
+    canvas=Image.new("RGBA",(200,20),(0,0,0,0))
+    draw=ImageDraw.Draw(canvas)
+    draw.rectangle((0,0,199,19),fill=(16,10,28,255),outline=(9,6,13,255),width=1)
+    for y in range(2,18):
+        t=y/17
+        if disabled:
+            color=(44,40,51,255)
+        elif highlighted:
+            color=(85+int(25*t),38+int(15*t),112+int(16*t),255)
+        else:
+            color=(43+int(9*t),30+int(7*t),61+int(9*t),255)
+        draw.line((2,y,197,y),fill=color)
+    rim=(252,126,236,255) if highlighted else ((92,78,108,255) if disabled else (165,83,192,255))
+    draw.line((2,1,197,1),fill=rim,width=1)
+    draw.line((1,2,1,17),fill=rim,width=1)
+    draw.line((198,2,198,17),fill=rim,width=1)
+    draw.line((2,18,197,18),fill=(26,13,39,255),width=1)
+    if not disabled:
+        draw.line((6,5,11,10),fill=(236,138,246,255),width=1)
+        draw.line((188,10,193,5),fill=(236,138,246,255),width=1)
+    output=BytesIO();canvas.save(output,"PNG",optimize=True)
+    return output.getvalue()
+
+gui_button_path="assets/minecraft/textures/gui/sprites/widget/"
+for filename,hover,disabled in (
+    ("button.png",False,False),
+    ("button_highlighted.png",True,False),
+    ("button_disabled.png",False,True)):
+    files[gui_button_path+filename]=axoria_gui_button(hover,disabled)
+    files[gui_button_path+filename+".mcmeta"]=json.dumps({
+        "gui":{"scaling":{"type":"nine_slice","width":200,"height":20,
+                           "border":3}}
+    },separators=(",",":")).encode()
+
+# The pause-menu heading is a translatable string; a server pack cannot
+# rearrange vanilla widgets or add functional pause buttons.
+# Use a bitmap font glyph for the Axoria header if the source pack already
+# has a working vanilla default font definition to extend safely.
+font_path="assets/minecraft/font/default.json"
+if font_path in files:
+    try:
+        font=json.loads(files[font_path].decode("utf-8"))
+        if isinstance(font.get("providers"),list):
+            logo=Image.new("RGBA",(960,144),(0,0,0,0))
+            ld=ImageDraw.Draw(logo)
+            ld.rounded_rectangle((185,9,775,133),radius=32,
+                fill=(24,9,43,247),outline=(184,78,240,255),width=7)
+            try:
+                bold=ImageFont.truetype("DejaVuSans-Bold.ttf",102)
+                mini=ImageFont.truetype("DejaVuSans-Bold.ttf",23)
+            except OSError:
+                bold=ImageFont.load_default()
+                mini=ImageFont.load_default()
+            ld.text((480,61),"AXORIA",anchor="mm",font=bold,
+                fill=(239,210,255,255),stroke_width=3,stroke_fill=(89,23,134,255))
+            ld.text((480,119),"S K Y B L O C K",anchor="mm",font=mini,
+                fill=(255,151,235,255))
+            bio=BytesIO();logo.save(bio,"PNG",optimize=True)
+            files["assets/axoria/textures/font/esc_logo.png"]=bio.getvalue()
+            font["providers"].insert(0,{"type":"bitmap","file":"axoria:font/esc_logo.png",
+                "ascent":43,"height":48,"chars":["\\ue000"]})
+            files[font_path]=json.dumps(font,ensure_ascii=False,separators=(",",":")).encode()
+            heading="\\ue000"
+        else:
+            heading="✦ AXORIA SKYBLOCK ✦"
+    except (ValueError,UnicodeError,TypeError):
+        heading="✦ AXORIA SKYBLOCK ✦"
+else:
+    heading="✦ AXORIA SKYBLOCK ✦"
+for lang in ("de_de","en_us"):
+    lang_path="assets/minecraft/lang/"+lang+".json"
+    try:
+        strings=json.loads(files[lang_path].decode("utf-8")) if lang_path in files else {}
+    except (ValueError,UnicodeError):
+        strings={}
+    strings["menu.game"]=heading
+    files[lang_path]=json.dumps(strings,ensure_ascii=False,separators=(",",":")).encode()
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
