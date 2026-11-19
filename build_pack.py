@@ -378,41 +378,55 @@ for filename,hover,disabled in (
                            "border":3}}
     },separators=(",",":")).encode()
 
-# The pause-menu heading is a translatable string; a server pack cannot
-# rearrange vanilla widgets or add functional pause buttons.
-# Use a bitmap font glyph for the Axoria header if the source pack already
-# has a working vanilla default font definition to extend safely.
+# Minecraft pause menu title: render an ACTUAL bitmap logo instead of text.
+# The source pack doesn't include default.json. Refer to vanilla's font
+# include layers so we preserve all ordinary Minecraft characters.
 font_path="assets/minecraft/font/default.json"
-if font_path in files:
-    try:
-        font=json.loads(files[font_path].decode("utf-8"))
-        if isinstance(font.get("providers"),list):
-            logo=Image.new("RGBA",(960,144),(0,0,0,0))
-            ld=ImageDraw.Draw(logo)
-            ld.rounded_rectangle((185,9,775,133),radius=32,
-                fill=(24,9,43,247),outline=(184,78,240,255),width=7)
-            try:
-                bold=ImageFont.truetype("DejaVuSans-Bold.ttf",102)
-                mini=ImageFont.truetype("DejaVuSans-Bold.ttf",23)
-            except OSError:
-                bold=ImageFont.load_default()
-                mini=ImageFont.load_default()
-            ld.text((480,61),"AXORIA",anchor="mm",font=bold,
-                fill=(239,210,255,255),stroke_width=3,stroke_fill=(89,23,134,255))
-            ld.text((480,119),"S K Y B L O C K",anchor="mm",font=mini,
-                fill=(255,151,235,255))
-            bio=BytesIO();logo.save(bio,"PNG",optimize=True)
-            files["assets/axoria/textures/font/esc_logo.png"]=bio.getvalue()
-            font["providers"].insert(0,{"type":"bitmap","file":"axoria:font/esc_logo.png",
-                "ascent":43,"height":48,"chars":["\ue000"]})
-            files[font_path]=json.dumps(font,ensure_ascii=False,separators=(",",":")).encode()
-            heading="\ue000"
-        else:
-            heading="✦ AXORIA SKYBLOCK ✦"
-    except (ValueError,UnicodeError,TypeError):
-        heading="✦ AXORIA SKYBLOCK ✦"
-else:
-    heading="✦ AXORIA SKYBLOCK ✦"
+logo=Image.new("RGBA",(480,128),(0,0,0,0))
+ld=ImageDraw.Draw(logo)
+# Logo art: pastel axolotl mascot, amethyst wings and AXORIA lettering.
+ld.polygon([(15,69),(70,31),(130,66),(102,107),(46,108)],fill=(89,28,143,250))
+ld.polygon([(465,69),(410,31),(350,66),(378,107),(434,108)],fill=(89,28,143,250))
+for x in (37,58,422,443):
+    ld.polygon([(x-12,46),(x,12),(x+11,49)],fill=(227,96,250,255))
+ld.rounded_rectangle((150,4,330,75),radius=22,fill=(231,150,203,255),outline=(83,29,111,255),width=5)
+for x in (169,297):
+    ld.rounded_rectangle((x-13,14,x+13,47),radius=5,fill=(246,169,217,255),outline=(99,28,107,255),width=3)
+for x in (208,269):
+    ld.rectangle((x,30,x+9,41),fill=(24,13,45,255))
+ld.arc((222,29,257,59),15,165,fill=(80,28,86,255),width=3)
+ld.rounded_rectangle((38,75,442,125),radius=14,fill=(33,13,60,255),outline=(236,123,252,255),width=4)
+try:
+    font=ImageFont.truetype("DejaVuSans-Bold.ttf",56)
+    caption=ImageFont.truetype("DejaVuSans-Bold.ttf",12)
+except OSError:
+    font=ImageFont.load_default()
+    caption=ImageFont.load_default()
+# use text at natural image scale; the bitmap font scales the entire logo
+ld.text((240,96),"AXORIA",anchor="mm",font=font,fill=(251,230,255,255),
+        stroke_width=2,stroke_fill=(97,30,152,255))
+logo_bytes=BytesIO()
+logo.save(logo_bytes,format="PNG",optimize=True)
+files["assets/axoria/textures/font/esc_logo.png"]=logo_bytes.getvalue()
+
+try:
+    existing=json.loads(files[font_path].decode("utf-8")) if font_path in files else {}
+except (UnicodeError,ValueError,TypeError):
+    existing={}
+providers=existing.get("providers",[])
+if not isinstance(providers,list):
+    providers=[]
+providers=[p for p in providers if not (isinstance(p,dict) and p.get("file")=="axoria:font/esc_logo.png")]
+# Include the native font rather than replacing it with one image glyph.
+if not any(isinstance(p,dict) and p.get("id")=="minecraft:include/default" for p in providers):
+    providers.append({"type":"reference","id":"minecraft:include/default"})
+if not any(isinstance(p,dict) and p.get("id")=="minecraft:include/space" for p in providers):
+    providers.insert(0,{"type":"reference","id":"minecraft:include/space"})
+providers.insert(0,{
+    "type":"bitmap","file":"axoria:font/esc_logo.png",
+    "ascent":13,"height":35,"chars":["\\ue000"]})
+files[font_path]=json.dumps({"providers":providers},ensure_ascii=False,separators=(",",":")).encode()
+heading="\\ue000"
 for lang in ("de_de","en_us"):
     lang_path="assets/minecraft/lang/"+lang+".json"
     try:
