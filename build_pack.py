@@ -404,9 +404,9 @@ if font_path in files:
             bio=BytesIO();logo.save(bio,"PNG",optimize=True)
             files["assets/axoria/textures/font/esc_logo.png"]=bio.getvalue()
             font["providers"].insert(0,{"type":"bitmap","file":"axoria:font/esc_logo.png",
-                "ascent":43,"height":48,"chars":["\\ue000"]})
+                "ascent":43,"height":48,"chars":["\ue000"]})
             files[font_path]=json.dumps(font,ensure_ascii=False,separators=(",",":")).encode()
-            heading="\\ue000"
+            heading="\ue000"
         else:
             heading="✦ AXORIA SKYBLOCK ✦"
     except (ValueError,UnicodeError,TypeError):
