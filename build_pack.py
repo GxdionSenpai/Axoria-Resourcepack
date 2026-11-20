@@ -430,6 +430,47 @@ for filename,hover,disabled in (
         "gui":{"scaling":{"type":"nine_slice","width":200,"height":20,"border":3}}
     },separators=(",",":")).encode("utf-8")
 
+# Season 1 wearable Guardian/Elder-Guardian armor from the user's EXACT
+# 64x64 NameMC skins. Equipment assets are selected per item via
+# ItemMeta.getEquippable().setModel(axoria:s1_guardian / s1_elder_guardian).
+# Vanilla leather armor and all other custom items remain unaffected.
+for gear_name,source_name in (
+    ("s1_guardian","season1_guardian_skin.png"),
+    ("s1_elder_guardian","season1_elder_guardian_skin.png")
+):
+    with Image.open(source_name) as skin_file:
+        skin=skin_file.convert("RGBA")
+    if skin.size!=(64,64):
+        raise ValueError("Season 1 skin must be 64x64: "+source_name)
+    # Standard player skin and Minecraft humanoid armor share the classic
+    # helmet UV layout. Merge modern second-head-layer pixels into the
+    # base head for the exact eye/face markings from each uploaded skin.
+    upper=skin.crop((0,0,64,32)).copy()
+    for sy in range(16):
+        for sx in range(32):
+            under=upper.getpixel((sx,sy))
+            above=skin.getpixel((sx+32,sy))
+            if above[3]:
+                composite=Image.alpha_composite(
+                    Image.new("RGBA",(1,1),under),
+                    Image.new("RGBA",(1,1),above))
+                upper.putpixel((sx,sy),composite.getpixel((0,0)))
+    # The skin's head hat-layer data isn't a separate armor cube.
+    for sy in range(16):
+        for sx in range(32,64):upper.putpixel((sx,sy),(0,0,0,0))
+    lower=Image.new("RGBA",(64,32),(0,0,0,0))
+    lower.paste(skin.crop((0,16,16,32)),(0,16))
+    for category,image in (("humanoid",upper),("humanoid_leggings",lower)):
+        encoded=BytesIO()
+        image.save(encoded,format="PNG",optimize=True)
+        files["assets/axoria/textures/entity/equipment/"+category+"/"+gear_name+".png"]=encoded.getvalue()
+    files["assets/axoria/equipment/"+gear_name+".json"]=json.dumps({
+        "layers":{
+            "humanoid":[{"texture":"axoria:"+gear_name}],
+            "humanoid_leggings":[{"texture":"axoria:"+gear_name}]
+        }
+    },separators=(",",":")).encode("utf-8")
+
 # Validate the generated icon mapping; fail publishing if it is accidentally
 # encoded as six literal characters ('\\uE000') or missing its font provider.
 font_check=json.loads(files[font_file])
