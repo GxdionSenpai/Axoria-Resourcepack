@@ -368,7 +368,7 @@ providers=[entry for entry in providers
            if not(isinstance(entry,dict) and entry.get("file")=="axoria:font/esc_logo.png")]
 providers.insert(0,{
     "type":"bitmap","file":"axoria:font/esc_logo.png",
-    "ascent":19,"height":45,"chars":[chr(0xE000)]
+    "ascent":19,"height":105,"chars":[chr(0xE000)]
 })
 files[font_file]=json.dumps({"providers":providers},ensure_ascii=False,separators=(",",":")).encode("utf-8")
 for lang in ("en_us","de_de"):
@@ -381,19 +381,37 @@ for lang in ("en_us","de_de"):
     files[lang_file]=json.dumps(translations,ensure_ascii=False,separators=(",",":")).encode("utf-8")
 
 def axoria_pause_button(hover=False,disabled=False):
+    # Close to the approved poster's physical slate-grey buttons and
+    # luminous pink diagonal corner trims (not solid purple buttons).
     picture=Image.new("RGBA",(200,20),(0,0,0,0))
-    draw=ImageDraw.Draw(picture)
-    draw.rectangle((0,0,199,19),fill=(17,10,30,255),outline=(8,5,12,255))
-    for y in range(2,18):
-        if disabled:fill=(37,33,44,255)
-        elif hover:fill=(87+y,35+y//2,114+y,255)
-        else:fill=(42+y//2,27+y//3,60+y//2,255)
-        draw.line((2,y,197,y),fill=fill)
-    line=(244,122,243,255) if hover else (130,71,166,255)
-    draw.line((2,1,197,1),fill=line)
-    draw.line((1,2,1,17),fill=line)
-    draw.line((198,2,198,17),fill=line)
-    draw.line((2,18,197,18),fill=(28,15,40,255))
+    d=ImageDraw.Draw(picture)
+    # Ink-black drop shadow, then bevelled 9-slice-safe 3 px frame.
+    d.rectangle((0,1,199,19),fill=(10,6,14,255))
+    d.rectangle((1,1,198,17),fill=(36,34,40,255))
+    for y in range(3,16):
+        if disabled:
+            grey=49+y//5; color=(grey,grey-1,grey+3,255)
+        elif hover:
+            grey=102-y//4; color=(grey+3,grey-6,grey+10,255)
+        else:
+            grey=96-y//5; color=(grey,grey-1,grey+4,255)
+        d.line((3,y,196,y),fill=color)
+    # Silver bevel and thin lilac border, dark underside.
+    d.line((3,2,196,2),fill=(174,162,182,255))
+    d.line((2,3,2,16),fill=(112,100,120,255))
+    d.line((197,3,197,16),fill=(82,68,90,255))
+    d.line((2,17,197,17),fill=(22,17,29,255))
+    d.line((3,18,197,18),fill=(7,5,10,255))
+    # Important: diagonal magenta decorations exactly like the reference.
+    if not disabled:
+        pink=(255,124,246,255) if hover else (224,84,220,255)
+        glow=(247,167,248,255) if hover else (169,67,184,255)
+        d.line([(3,4),(7,8),(12,14)],fill=glow,width=2)
+        d.line([(4,3),(8,8),(13,14)],fill=pink,width=1)
+        d.line((12,14,18,14),fill=pink,width=1)
+        d.line([(196,4),(192,8),(187,14)],fill=glow,width=2)
+        d.line([(195,3),(191,8),(186,14)],fill=pink,width=1)
+        d.line((181,14,187,14),fill=pink,width=1)
     buf=BytesIO();picture.save(buf,format="PNG",optimize=True)
     return buf.getvalue()
 
