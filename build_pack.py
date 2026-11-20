@@ -350,6 +350,12 @@ if not logo_file.is_file():
 logo_data=logo_file.read_bytes()
 with Image.open(BytesIO(logo_data)) as validated_logo:
     validated_logo.verify()
+# Exact freshly generated ESC crest; never silently publish an older image.
+# Changing this source file also triggers the existing resourcepack release
+# workflow, which updates the downloadable ZIP and its SHA-1 manifest.
+with Image.open(BytesIO(logo_data)) as logo_check:
+    if logo_check.size != (256, 118):
+        raise RuntimeError("Axoria ESC logo must be 256x118 PNG, got "+str(logo_check.size))
 files["assets/axoria/textures/font/esc_logo.png"]=logo_data
 font_file="assets/minecraft/font/default.json"
 # Match vanilla Minecraft 1.21 font/default.json exactly, only prepending
