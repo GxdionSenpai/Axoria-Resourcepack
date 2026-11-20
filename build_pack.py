@@ -338,6 +338,82 @@ for path, data in list(files.items()):
         except Exception as exc:
             raise RuntimeError("Invalid item PNG texture: " + path) from exc
 
+
+# Official Axoria pause-menu styling. Keep ALL built-in font providers.
+# Earlier pack versions replaced default.json with incomplete references,
+# breaking symbols and resource pack rendering for other players.
+from PIL import ImageDraw
+
+logo_file=Path("assets/axoria/textures/font/esc_logo.png")
+if not logo_file.is_file():
+    raise RuntimeError("Missing actual Axoria ESC logo asset: "+str(logo_file))
+logo_data=logo_file.read_bytes()
+with Image.open(BytesIO(logo_data)) as validated_logo:
+    validated_logo.verify()
+files["assets/axoria/textures/font/esc_logo.png"]=logo_data
+font_file="assets/minecraft/font/default.json"
+# Match vanilla Minecraft 1.21 font/default.json exactly, only prepending
+# one bitmap glyph. This preserves all standard, uniform and unifont symbols.
+try:
+    existing_font=json.loads(files[font_file].decode("utf-8")) if font_file in files else {}
+except (UnicodeError,ValueError):
+    existing_font={}
+providers=existing_font.get("providers")
+if not isinstance(providers,list) or not providers:
+    providers=[
+        {"type":"reference","id":"minecraft:include/space"},
+        {"type":"reference","id":"minecraft:include/default","filter":{"uniform":False}},
+        {"type":"reference","id":"minecraft:include/unifont"}]
+providers=[entry for entry in providers
+           if not(isinstance(entry,dict) and entry.get("file")=="axoria:font/esc_logo.png")]
+providers.insert(0,{
+    "type":"bitmap","file":"axoria:font/esc_logo.png",
+    "ascent":19,"height":45,"chars":[chr(0xE000)]
+})
+files[font_file]=json.dumps({"providers":providers},ensure_ascii=False,separators=(",",":")).encode("utf-8")
+for lang in ("en_us","de_de"):
+    lang_file="assets/minecraft/lang/"+lang+".json"
+    try:
+        translations=json.loads(files[lang_file].decode("utf-8")) if lang_file in files else {}
+    except (UnicodeError,ValueError):
+        translations={}
+    translations["menu.game"]=chr(0xE000)
+    files[lang_file]=json.dumps(translations,ensure_ascii=False,separators=(",",":")).encode("utf-8")
+
+def axoria_pause_button(hover=False,disabled=False):
+    picture=Image.new("RGBA",(200,20),(0,0,0,0))
+    draw=ImageDraw.Draw(picture)
+    draw.rectangle((0,0,199,19),fill=(17,10,30,255),outline=(8,5,12,255))
+    for y in range(2,18):
+        if disabled:fill=(37,33,44,255)
+        elif hover:fill=(87+y,35+y//2,114+y,255)
+        else:fill=(42+y//2,27+y//3,60+y//2,255)
+        draw.line((2,y,197,y),fill=fill)
+    line=(244,122,243,255) if hover else (130,71,166,255)
+    draw.line((2,1,197,1),fill=line)
+    draw.line((1,2,1,17),fill=line)
+    draw.line((198,2,198,17),fill=line)
+    draw.line((2,18,197,18),fill=(28,15,40,255))
+    buf=BytesIO();picture.save(buf,format="PNG",optimize=True)
+    return buf.getvalue()
+
+for filename,hover,disabled in (
+    ("button.png",False,False),("button_highlighted.png",True,False),
+    ("button_disabled.png",False,True)):
+    asset="assets/minecraft/textures/gui/sprites/widget/"+filename
+    files[asset]=axoria_pause_button(hover,disabled)
+    files[asset+".mcmeta"]=json.dumps({
+        "gui":{"scaling":{"type":"nine_slice","width":200,"height":20,"border":3}}
+    },separators=(",",":")).encode("utf-8")
+
+# Validate the generated icon mapping; fail publishing if it is accidentally
+# encoded as six literal characters ('\\uE000') or missing its font provider.
+font_check=json.loads(files[font_file])
+assert font_check["providers"][0]["chars"][0]==chr(0xE000)
+assert all(any(p.get("id")==id for p in font_check["providers"])
+           for id in ("minecraft:include/space","minecraft:include/default",
+                      "minecraft:include/unifont"))
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
