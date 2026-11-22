@@ -649,38 +649,50 @@ def make_custom_armor_icon(theme,piece):
     # Four independently assigned pieces, each exactly 128x128 pixels.
     return icon.resize((128,128),Image.Resampling.NEAREST)
 
+# These four ids are per-ITEM, not per leather material. In Minecraft
+# 26.3 item_model (assets/axoria/items/*.json) is authoritative and keeps
+# all 8 inventory icons isolated from other leather armor or packs.
+# Do NOT override assets/minecraft/items/leather_*.json: that previously
+# produced misleading common icons and damaged vanilla fallbacks.
 armor_parts=("helmet","chestplate","leggings","boots")
-for armor_part_index,armor_part in enumerate(armor_parts):
-    vanilla_name="leather_"+armor_part
-    path="assets/minecraft/items/"+vanilla_name+".json"
-    if path in files:
-        prior=json.loads(files[path].decode("utf-8"))
-        normal=prior["model"]
-    else:
-        # Vanilla leather armor uses two-layer dyed inventory models.
-        normal={"type":"minecraft:model","model":"minecraft:item/"+vanilla_name,
-                "tints":[{"type":"minecraft:dye","default":[160,101,64]}]}
-    entries=[]
-    for gear_name,model_id in (("emerald",1301+armor_part_index),
-                               ("amethyst",1311+armor_part_index)):
+for gear_name in ("emerald","amethyst"):
+    for armor_part in armor_parts:
         art_name=gear_name+"_"+armor_part
         image=make_custom_armor_icon(gear_name,armor_part)
-        bio=BytesIO();image.save(bio,format="PNG",optimize=True)
+        if image.size!=(128,128):
+            raise ValueError("Custom armor inventory texture must be 128x128: "+art_name)
+        bio=BytesIO()
+        image.save(bio,format="PNG",optimize=True)
         files["assets/axoria/textures/item/"+art_name+".png"]=bio.getvalue()
         files["assets/axoria/models/item/"+art_name+".json"]=json.dumps({
             "parent":"minecraft:item/generated",
             "textures":{"layer0":"axoria:item/"+art_name}
         },separators=(",",":")).encode("utf-8")
-        entries.extend((
-            {"threshold":model_id,"model":{"type":"minecraft:model",
-                "model":"axoria:item/"+art_name}},
-            {"threshold":model_id+0.5,"model":normal}
-        ))
-    files[path]=json.dumps({
-        "model":{"type":"minecraft:range_dispatch",
-                 "property":"minecraft:custom_model_data","index":0,
-                 "fallback":normal,"entries":sorted(entries,key=lambda x:x["threshold"])}
-    },separators=(",",":")).encode("utf-8")
+        files["assets/axoria/items/"+art_name+".json"]=json.dumps({
+            "model":{"type":"minecraft:model","model":"axoria:item/"+art_name}
+        },separators=(",",":")).encode("utf-8")
+
+# Fail pack release instead of silently shipping blank, corrupt or shared
+# armor art. Both equipped variants have two independent 256x128 atlases,
+# and eight exact 128x128 individual inventory textures.
+for gear_name in ("emerald","amethyst"):
+    path="assets/axoria/equipment/"+gear_name+".json"
+    parsed=json.loads(files[path])
+    for layer_name in ("humanoid","humanoid_leggings"):
+        texture_id=parsed["layers"][layer_name][0]["texture"]
+        if texture_id!="axoria:"+gear_name:
+            raise ValueError("Wrong wearable texture id: "+path+" "+layer_name)
+        tex="assets/axoria/textures/entity/equipment/"+layer_name+"/"+gear_name+".png"
+        image=Image.open(BytesIO(files[tex]))
+        if image.size!=(256,128) or image.getbbox() is None:
+            raise ValueError("Invalid 256x128 wearable texture: "+tex)
+    for part in armor_parts:
+        key=gear_name+"_"+part
+        png=Image.open(BytesIO(files["assets/axoria/textures/item/"+key+".png"]))
+        if png.size!=(128,128) or png.getbbox() is None:
+            raise ValueError("Invalid 128x128 armor icon: "+key)
+        if json.loads(files["assets/axoria/items/"+key+".json"])["model"]["model"]!="axoria:item/"+key:
+            raise ValueError("Wrong item model: "+key)
 
 # Validate the generated icon mapping; fail publishing if it is accidentally
 # encoded as six literal characters ('\\uE000') or missing its font provider.
