@@ -572,6 +572,98 @@ for armor_id in ("emerald","amethyst"):
         }
     },separators=(",",":")).encode("utf-8")
 
+# Pixel-sharp Season-independent inventory armor icons. CMD thresholds are
+# deliberately dedicated to Axoria's two custom sets only; preserve the
+# existing vanilla dyed-leather rendering for all unmarked armor.
+def make_custom_armor_icon(theme,piece):
+    if theme=="emerald":
+        outline=(8,43,31,255);base=(15,105,65,255)
+        mid=(36,177,103,255);light=(108,238,151,255)
+        trim=(241,200,94,255);glow=(197,255,204,255)
+    else:
+        outline=(38,20,69,255);base=(84,41,133,255)
+        mid=(145,72,215,255);light=(212,136,251,255)
+        trim=(211,197,244,255);glow=(255,220,255,255)
+    icon=Image.new("RGBA",(32,32),(0,0,0,0))
+    d=ImageDraw.Draw(icon)
+    def jewel(x,y,r=2):
+        d.polygon([(x,y-r),(x+r,y),(x,y+r),(x-r,y)],
+                  fill=light,outline=outline)
+        d.point((x,y-1),fill=glow)
+    if piece=="helmet":
+        d.polygon([(7,14),(8,8),(12,5),(20,5),(24,8),
+                   (25,14),(24,24),(20,27),(19,20),
+                   (13,20),(12,27),(8,24)],fill=base,outline=outline)
+        d.polygon([(10,13),(11,9),(15,7),(18,7),(22,10),
+                   (22,14)],fill=mid)
+        d.line((9,15,23,15),fill=trim,width=2)
+        d.line((9,22,12,24),fill=light,width=2)
+        d.line((20,24,23,22),fill=light,width=2)
+        jewel(16,11,3)
+    elif piece=="chestplate":
+        d.polygon([(7,6),(12,4),(14,7),(18,7),(20,4),
+                   (25,6),(29,13),(25,18),(23,15),(23,27),
+                   (9,27),(9,15),(7,18),(3,13)],fill=base,outline=outline)
+        d.polygon([(9,8),(14,10),(18,10),(23,8),
+                   (21,23),(11,23)],fill=mid)
+        d.line((10,24,22,24),fill=trim,width=2)
+        d.line((5,14,9,10),fill=light,width=2)
+        d.line((23,10,27,14),fill=light,width=2)
+        jewel(16,15,4)
+    elif piece=="leggings":
+        d.polygon([(8,5),(24,5),(25,14),(22,27),
+                   (17,27),(16,17),(15,27),(10,27),
+                   (7,14)],fill=base,outline=outline)
+        d.rectangle((10,7,22,11),fill=mid)
+        d.line((9,12,23,12),fill=trim,width=2)
+        d.line((10,23,14,23),fill=light,width=2)
+        d.line((18,23,22,23),fill=light,width=2)
+        jewel(16,9,2)
+    else:
+        for off in (0,12):
+            d.polygon([(5+off,8),(13+off,8),
+                       (13+off,21),(16+off,23),(16+off,27),
+                       (3+off,27),(3+off,23),(5+off,20)],
+                      fill=base,outline=outline)
+            d.rectangle((7+off,10,11+off,19),fill=mid)
+            d.line((4+off,23,14+off,23),fill=trim,width=2)
+            d.line((7+off,12,10+off,12),fill=light)
+    if icon.getbbox() is None:raise ValueError("Missing icon art: "+theme+" "+piece)
+    return icon.resize((64,64),Image.Resampling.NEAREST)
+
+armor_parts=("helmet","chestplate","leggings","boots")
+for armor_part_index,armor_part in enumerate(armor_parts):
+    vanilla_name="leather_"+armor_part
+    path="assets/minecraft/items/"+vanilla_name+".json"
+    if path in files:
+        prior=json.loads(files[path].decode("utf-8"))
+        normal=prior["model"]
+    else:
+        # Vanilla leather armor uses two-layer dyed inventory models.
+        normal={"type":"minecraft:model","model":"minecraft:item/"+vanilla_name,
+                "tints":[{"type":"minecraft:dye","default":[160,101,64]}]}
+    entries=[]
+    for gear_name,model_id in (("emerald",1301+armor_part_index),
+                               ("amethyst",1311+armor_part_index)):
+        art_name=gear_name+"_"+armor_part
+        image=make_custom_armor_icon(gear_name,armor_part)
+        bio=BytesIO();image.save(bio,format="PNG",optimize=True)
+        files["assets/axoria/textures/item/"+art_name+".png"]=bio.getvalue()
+        files["assets/axoria/models/item/"+art_name+".json"]=json.dumps({
+            "parent":"minecraft:item/generated",
+            "textures":{"layer0":"axoria:item/"+art_name}
+        },separators=(",",":")).encode("utf-8")
+        entries.extend((
+            {"threshold":model_id,"model":{"type":"minecraft:model",
+                "model":"axoria:item/"+art_name}},
+            {"threshold":model_id+0.5,"model":normal}
+        ))
+    files[path]=json.dumps({
+        "model":{"type":"minecraft:range_dispatch",
+                 "property":"minecraft:custom_model_data","index":0,
+                 "fallback":normal,"entries":sorted(entries,key=lambda x:x["threshold"])}
+    },separators=(",",":")).encode("utf-8")
+
 # Validate the generated icon mapping; fail publishing if it is accidentally
 # encoded as six literal characters ('\\uE000') or missing its font provider.
 font_check=json.loads(files[font_file])
