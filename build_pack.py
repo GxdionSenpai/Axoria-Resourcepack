@@ -478,92 +478,109 @@ for gear_name,source_name in (
 from PIL import ImageDraw
 
 def make_axoria_armor_layer(kind,leggings=False):
+    # Real equipped texture, with the Minecraft-required 2:1 UV ratio.
+    # Paint at 128x64 (2x vanilla UV detail) and export 256x128.
     if kind=="emerald":
-        dark=(8,41,31,255); base=(16,91,58,255)
-        light=(43,168,102,255); bright=(91,232,151,255)
-        edge=(5,27,26,255); metal=(233,193,90,255)
-        glow=(188,255,189,255)
+        edge="#062319"; shadow="#0A402E"; base="#0D7451"
+        high="#24BD7B"; shine="#63F0A0"; core="#B9FFE0"
+        trim="#F1C35E"; trim_dark="#92601D"; gem="#30E87D"
     else:
-        dark=(32,18,60,255); base=(75,42,118,255)
-        light=(138,77,202,255); bright=(201,133,252,255)
-        edge=(20,13,44,255); metal=(184,177,226,255)
-        glow=(247,215,255,255)
-    image=Image.new("RGBA",(64,32),(0,0,0,0))
-    draw=ImageDraw.Draw(image)
-    # Classic Minecraft armor UV islands: 32x16 helmet, torso 16x16,
-    # 16x16 arms, and 16x16 legs. Side faces shade darker than front.
-    def panel(x,y,w,h,shine=False):
-        if w<=0 or h<=0:return
-        draw.rectangle((x,y,x+w-1,y+h-1),fill=edge)
-        if w>2 and h>2:draw.rectangle((x+1,y+1,x+w-2,y+h-2),fill=base)
-        draw.line((x+1,y+1,x+w-2,y+1),fill=light)
-        draw.line((x+1,y+1,x+1,y+h-2),fill=light)
-        draw.line((x+w-2,y+2,x+w-2,y+h-2),fill=dark)
-        if shine and h>=6 and w>=6:
-            draw.line((x+2,y+3,x+w-3,y+3),fill=bright)
-            draw.point((x+3,y+2),fill=glow)
-    def gem(cx,cy,size=2):
-        draw.polygon([(cx,cy-size),(cx+size,cy),(cx,cy+size),(cx-size,cy)],
-                     fill=bright,outline=edge)
-        draw.point((cx,cy-1),fill=glow)
-    # Helmet top, lower rim and sides. The crown and front have stylized
-    # gold/pearl trim, a glowing faceted forehead crystal and cheek guards.
-    for x,y,w,h in ((8,0,8,8),(16,0,8,8),(0,8,8,8),
-                    (8,8,8,8),(16,8,8,8),(24,8,8,8)):
-        panel(x,y,w,h,shine=(x==8))
+        edge="#1A0F37"; shadow="#33205C"; base="#6531A6"
+        high="#AD60ED"; shine="#D99BFF"; core="#FFE2FF"
+        trim="#D8C6EF"; trim_dark="#8270B1"; gem="#E18EFF"
+    im=Image.new("RGBA",(128,64),(0,0,0,0))
+    d=ImageDraw.Draw(im)
+    U=2
+    def R(x,y,w,h,c):
+        d.rectangle((x*U,y*U,(x+w)*U-1,(y+h)*U-1),fill=c)
+    def L(points,c,width=1):
+        d.line([(x*U,y*U) for x,y in points],fill=c,width=width*U)
+    def P(x,y,c):
+        d.point((x*U,y*U),fill=c)
+    def gem_at(x,y,scale=1):
+        # Highlighted emerald / amethyst facets on front-facing panels.
+        d.polygon([(x*U,(y-2*scale)*U),((x+2*scale)*U,y*U),
+                   (x*U,(y+2*scale)*U),((x-2*scale)*U,y*U)],
+                   fill=gem,outline=edge,width=1)
+        L([(x-1*scale,y-1*scale),(x,y-2*scale)],core)
+        P(x,y-1*scale,shine)
+    def face(x,y,w,h):
+        R(x,y,w,h,edge)
+        R(x+1,y+1,w-2,h-2,shadow)
+        if w>=4 and h>=5:
+            R(x+1,y+2,w-2,h-4,base)
+            L([(x+1,y+1),(x+w-2,y+1)],high)
+            L([(x+1,y+2),(x+1,y+h-3)],high)
+            L([(x+w-2,y+2),(x+w-2,y+h-2)],edge)
+            L([(x+2,y+h-2),(x+w-2,y+h-2)],trim_dark)
+    # Standard 64x32 classic armor UV. Build every face: helmet cap,
+    # front + side + rear cuirass, sleeves, leg guards and footwear.
+    for q in ((8,0,8,8),(16,0,8,8),(0,8,8,8),(8,8,8,8),
+              (16,8,8,8),(24,8,8,8),
+              (20,16,8,4),(28,16,8,4),(16,20,4,12),
+              (20,20,8,12),(28,20,4,12),(32,20,8,12),
+              (40,16,4,4),(44,16,4,4),(48,16,4,4),(52,16,4,4),
+              (40,20,4,12),(44,20,4,12),(48,20,4,12),(52,20,4,12),
+              (4,16,4,4),(8,16,4,4),(0,20,4,12),
+              (4,20,4,12),(8,20,4,12),(12,20,4,12)):
+        face(*q)
     if not leggings:
-        for x in (8,16,24):
-            draw.line((x+1,13,x+6,13),fill=metal)
-        gem(12,10,2)
-        draw.line((10,14,14,14),fill=metal)
-        draw.point((9,11),fill=glow);draw.point((15,11),fill=glow)
-    # Chestplate and gauntlets: armor plate edges + angular chest gem.
-    for x,y,w,h in ((20,16,8,4),(28,16,8,4),
-                    (16,20,4,12),(20,20,8,12),(28,20,4,12),
-                    (32,20,8,12),(40,16,8,4),(48,16,8,4),
-                    (40,20,4,12),(44,20,4,12),(48,20,4,12),
-                    (52,20,4,12)):
-        panel(x,y,w,h,shine=(x in (20,44)))
-    # Bracer and torso trims, perfectly aligned to original armor cuboids.
-    draw.line((21,22,26,22),fill=metal)
-    draw.line((21,29,26,29),fill=metal)
-    gem(24,25,2)
-    for x in (40,44,48,52):
-        draw.line((x+1,28,x+2,28),fill=metal)
-        draw.point((x+1,23),fill=bright)
-    if kind=="emerald":
-        # Emerald sentinel: gilded plate seams and clean royal chevrons.
-        draw.line((21,26,23,28),fill=metal)
-        draw.line((25,28,27,26),fill=metal)
-        draw.line((9,5,14,5),fill=metal)
+        # Crown: frontal gemstone, broad decorative lower rim and
+        # framed eye area. Gold metal for emerald, silver for amethyst.
+        L([(9,14),(14,14)],trim)
+        L([(17,14),(22,14)],trim)
+        L([(9,12),(9,9),(12,8),(15,9)],trim)
+        gem_at(12,11,1)
+        L([(16,13),(18,15),(21,13)],trim_dark)
+        L([(24,11),(27,11),(30,12)],shine)
+        L([(0,12),(3,13),(6,12)],trim)
+        # Chest: angular pauldrons and central jewel, with a separate
+        # upper/lower plate, so this does not become a flat dyed shirt.
+        L([(17,20),(19,22),(20,21),(23,23)],trim)
+        L([(25,23),(28,21),(29,22),(31,20)],trim)
+        L([(21,24),(23,22),(25,22),(27,24)],shine)
+        gem_at(24,25,1)
+        L([(20,29),(22,31),(26,31),(28,29)],trim)
+        L([(21,27),(22,29)],trim_dark)
+        L([(27,27),(26,29)],trim_dark)
+        # Engraved arm braces with a contrasting cuff on every face.
+        for x in (40,44,48,52):
+            L([(x+1,23),(x+2,24),(x+2,26)],high)
+            L([(x+1,29),(x+2,29)],trim)
+        # Greaves and boots: knee and toe trims are visible from front,
+        # back and side, not only on a 2D inventory icon.
+        for x in (0,4,8,12):
+            L([(x,25),(x+3,25)],trim)
+            L([(x+1,28),(x+2,29)],shine)
+            L([(x,30),(x+3,30)],trim_dark)
     else:
-        # Amethyst arcane armor: clustered violet crystals and silvery runes.
-        draw.line((21,27,23,30),fill=glow)
-        draw.line((25,30,27,27),fill=glow)
-        draw.point((9,5),fill=glow)
-        draw.point((14,5),fill=glow)
-    # Leg cubes use the 0..16 x 16..32 map, in both armor layers.
-    for x,y,w,h in ((4,16,4,4),(8,16,4,4),(0,20,4,12),
-                    (4,20,4,12),(8,20,4,12),(12,20,4,12)):
-        panel(x,y,w,h,shine=(x==4))
-        if y==20:
-            draw.line((x+1,26,x+2,26),fill=metal)
-            draw.point((x+1,29),fill=bright)
-    if leggings:
-        # Leggings layer is lighter around the joints, so boots/leg
-        # segments remain visually readable beneath the cuirass.
-        draw.line((20,20,27,20),fill=metal)
-        draw.line((4,23,7,23),fill=glow)
-        draw.line((8,23,11,23),fill=glow)
-    if image.getbbox() is None:
-        raise ValueError("Blank custom armor layer: "+kind)
-    return image
+        # Leggings use their own 2:1 sheet. Sculpt a highlighted belt,
+        # faceted thigh plates and shining knees on all mapped sides.
+        for x in (0,4,8,12):
+            L([(x,22),(x+3,22)],trim)
+            L([(x+1,24),(x+2,25)],shine)
+            L([(x,28),(x+1,29),(x+3,28)],trim)
+        L([(21,21),(26,21)],trim)
+        gem_at(24,25,1)
+        L([(20,30),(27,30)],trim_dark)
+    if kind=="amethyst":
+        # Extra crystal tips: unique elder-purple silhouette markings.
+        for x,y in ((10,7),(13,7),(21,22),(27,22),(3,22),(10,27)):
+            P(x,y,core)
+    else:
+        # Emerald: slender gilded gold-corner ornaments.
+        for x,y in ((10,7),(14,7),(21,22),(27,22),(3,23),(9,27)):
+            P(x,y,trim)
+    if im.getbbox() is None:raise RuntimeError("Empty armor UV for "+kind)
+    return im.resize((256,128),Image.Resampling.NEAREST)
 
 for armor_id in ("emerald","amethyst"):
     for layer_name,is_leggings in (("humanoid",False),("humanoid_leggings",True)):
         texture=make_axoria_armor_layer(armor_id,is_leggings)
         output_png=BytesIO()
         texture.save(output_png,format="PNG",optimize=True)
+        if texture.size!=(256,128):
+            raise ValueError("Wearable armor must have 2:1 UV, 256x128")
         files["assets/axoria/textures/entity/equipment/"+layer_name+"/"+armor_id+".png"]=output_png.getvalue()
     files["assets/axoria/equipment/"+armor_id+".json"]=json.dumps({
         "layers":{
@@ -629,7 +646,8 @@ def make_custom_armor_icon(theme,piece):
             d.line((4+off,23,14+off,23),fill=trim,width=2)
             d.line((7+off,12,10+off,12),fill=light)
     if icon.getbbox() is None:raise ValueError("Missing icon art: "+theme+" "+piece)
-    return icon.resize((64,64),Image.Resampling.NEAREST)
+    # Four independently assigned pieces, each exactly 128x128 pixels.
+    return icon.resize((128,128),Image.Resampling.NEAREST)
 
 armor_parts=("helmet","chestplate","leggings","boots")
 for armor_part_index,armor_part in enumerate(armor_parts):
