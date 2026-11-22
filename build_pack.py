@@ -483,7 +483,10 @@ from PIL import ImageDraw
 # This is a recolor ONLY, per the owner's explicit request.
 def recolor_diamond(source,kind,output_size):
     image=Image.open(source).convert("RGBA")
-    if kind=="emerald":
+    if kind=="beta":
+        gradient=((54,20,5),(112,44,6),(190,85,15),
+                  (241,139,28),(255,209,85))
+    elif kind=="emerald":
         gradient=((6,32,21),(12,80,43),(21,147,75),
                   (45,205,111),(125,255,181))
     else:
@@ -514,7 +517,7 @@ def make_axoria_armor_layer(kind,leggings=False):
     if image.size!=(256,128):raise ValueError("Worn armor UV must remain 2:1")
     return image
 
-for armor_id in ("emerald","amethyst"):
+for armor_id in ("emerald","amethyst","beta"):
     for layer_name,is_leggings in (("humanoid",False),("humanoid_leggings",True)):
         texture=make_axoria_armor_layer(armor_id,is_leggings)
         output_png=BytesIO()
@@ -545,7 +548,7 @@ def make_custom_armor_icon(theme,piece):
 # Do NOT override assets/minecraft/items/leather_*.json: that previously
 # produced misleading common icons and damaged vanilla fallbacks.
 armor_parts=("helmet","chestplate","leggings","boots")
-for gear_name in ("emerald","amethyst"):
+for gear_name in ("emerald","amethyst","beta"):
     for armor_part in armor_parts:
         art_name=gear_name+"_"+armor_part
         image=make_custom_armor_icon(gear_name,armor_part)
@@ -592,7 +595,7 @@ for part_index,part in enumerate(armor_parts):
 # Fail pack release instead of silently shipping blank, corrupt or shared
 # armor art. Both equipped variants have two independent 256x128 atlases,
 # and eight exact 128x128 individual inventory textures.
-for gear_name in ("emerald","amethyst"):
+for gear_name in ("emerald","amethyst","beta"):
     path="assets/axoria/equipment/"+gear_name+".json"
     parsed=json.loads(files[path])
     for layer_name in ("humanoid","humanoid_leggings"):
@@ -610,6 +613,102 @@ for gear_name in ("emerald","amethyst"):
             raise ValueError("Invalid 128x128 armor icon: "+key)
         if json.loads(files["assets/axoria/items/"+key+".json"])["model"]["model"]!="axoria:item/"+key:
             raise ValueError("Wrong item model: "+key)
+
+# BETA inventory icons use golden-* vanilla fallback; never replace diamond or leather.
+# Reuse the original diamond silhouettes, recolored orange at 128x128.
+for idx,part in enumerate(armor_parts):
+    fallback="golden_"+part
+    name="beta_"+part
+    default={"type":"minecraft:model","model":"minecraft:item/"+fallback}
+    item_path="assets/minecraft/items/"+fallback+".json"
+    if item_path in files:
+        default=json.loads(files[item_path].decode("utf-8"))["model"]
+    custom={"type":"minecraft:model","model":"axoria:item/"+name}
+    files[item_path]=json.dumps({"model":{"type":"minecraft:range_dispatch",
+        "property":"minecraft:custom_model_data","index":0,
+        "fallback":default,"entries":[
+            {"threshold":1401+idx,"model":custom},
+            {"threshold":1401.5+idx,"model":default}
+        ]}},separators=(",",":")).encode("utf-8")
+
+# Bright orange-gold pixel-art sprites for BETA ingot, template and tools.
+from PIL import ImageDraw as BetaDraw
+def beta_sprite(kind):
+    im=Image.new("RGBA",(16,16),(0,0,0,0))
+    draw=BetaDraw.Draw(im)
+    dark=(93,41,8,255);mid=(204,95,20,255)
+    gold=(255,162,42,255);light=(255,222,111,255)
+    handle=(92,49,24,255);handle2=(155,95,37,255)
+    if kind=="ingot":
+        draw.polygon([(3,10),(5,6),(12,6),(14,11),(11,13),(2,13)],fill=dark)
+        draw.polygon([(4,9),(6,6),(11,6),(13,10),(11,11),(3,11)],fill=gold)
+        draw.line([(6,7),(11,7)],fill=light,width=2)
+    elif kind=="template":
+        draw.rectangle((3,1,12,14),fill=dark)
+        draw.rectangle((4,2,11,13),fill=gold)
+        draw.rectangle((5,3,10,12),fill=mid)
+        draw.polygon([(7,4),(10,7),(8,9),(5,7)],fill=light)
+        draw.rectangle((7,10,9,11),fill=light)
+    else:
+        # Same diagonal handle style as vanilla Minecraft tools.
+        draw.line([(4,13),(11,6)],fill=dark,width=4)
+        draw.line([(4,12),(10,6)],fill=handle,width=2)
+        draw.line([(5,11),(9,7)],fill=handle2,width=1)
+        if kind=="pickaxe":
+            draw.line([(3,3),(12,3)],fill=dark,width=4)
+            draw.line([(3,2),(12,2)],fill=gold,width=2)
+            draw.point((2,4),fill=light)
+        elif kind=="axe":
+            draw.polygon([(8,1),(13,2),(14,7),(11,9),(7,6)],fill=dark)
+            draw.polygon([(8,2),(12,3),(13,6),(10,8),(8,6)],fill=gold)
+            draw.line([(9,3),(11,3)],fill=light,width=2)
+        elif kind=="shovel":
+            draw.polygon([(10,1),(14,4),(13,7),(10,9),(7,6),(8,3)],fill=dark)
+            draw.polygon([(10,2),(13,4),(12,6),(10,8),(8,6),(9,4)],fill=gold)
+            draw.line([(10,3),(12,4)],fill=light,width=1)
+        elif kind=="hoe":
+            draw.line([(8,3),(13,3)],fill=dark,width=4)
+            draw.line([(9,2),(13,2)],fill=gold,width=2)
+            draw.line([(8,4),(8,7)],fill=gold,width=2)
+        elif kind=="sword":
+            draw.line([(5,12),(12,2)],fill=dark,width=5)
+            draw.line([(5,11),(11,3)],fill=gold,width=3)
+            draw.line([(7,9),(11,3)],fill=light,width=1)
+            draw.line([(3,9),(8,13)],fill=mid,width=3)
+    return im.resize((128,128),Image.Resampling.NEAREST)
+beta_base={
+    "gold_ingot":("ingot",1460),
+    "netherite_upgrade_smithing_template":("template",1461),
+    "golden_pickaxe":("pickaxe",1405),
+    "golden_axe":("axe",1406),
+    "golden_shovel":("shovel",1407),
+    "golden_hoe":("hoe",1408),
+    "golden_sword":("sword",1409)
+}
+for vanilla,(kind,cmd) in beta_base.items():
+    sprite=beta_sprite(kind)
+    bio=BytesIO();sprite.save(bio,format="PNG",optimize=True)
+    name="beta_"+kind
+    files["assets/axoria/textures/item/"+name+".png"]=bio.getvalue()
+    files["assets/axoria/models/item/"+name+".json"]=json.dumps({
+        "parent":"minecraft:item/generated",
+        "textures":{"layer0":"axoria:item/"+name}
+    },separators=(",",":")).encode()
+    path="assets/minecraft/items/"+vanilla+".json"
+    fallback=json.loads(files[path].decode())["model"] if path in files else {
+        "type":"minecraft:model","model":"minecraft:item/"+vanilla}
+    model={"type":"minecraft:model","model":"axoria:item/"+name}
+    files[path]=json.dumps({"model":{"type":"minecraft:range_dispatch",
+        "property":"minecraft:custom_model_data","index":0,
+        "fallback":fallback,"entries":[
+            {"threshold":cmd,"model":model},
+            {"threshold":cmd+0.5,"model":fallback}
+        ]}},separators=(",",":")).encode()
+# Fail publication if any BETA armor sprite/layer is blank or wrongly sized.
+for part in armor_parts:
+    assert Image.open(BytesIO(files["assets/axoria/textures/item/beta_"+part+".png"])).size==(128,128)
+for name in ("humanoid","humanoid_leggings"):
+    assert Image.open(BytesIO(files["assets/axoria/textures/entity/equipment/"+name+"/beta.png"])).size==(256,128)
 
 # Validate the generated icon mapping; fail publishing if it is accidentally
 # encoded as six literal characters ('\\uE000') or missing its font provider.
