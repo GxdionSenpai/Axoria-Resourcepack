@@ -571,6 +571,57 @@ def make_axoria_armor_layer(kind,leggings=False):
         # Emerald: slender gilded gold-corner ornaments.
         for x,y in ((10,7),(14,7),(21,22),(27,22),(3,23),(9,27)):
             P(x,y,trim)
+    # 2026 S1 custom armor v3: visibly distinct face-level ornamentation
+    # on WORN armor, not just the 128px inventory icon. All coordinates
+    # stay inside Minecraft's exact classic armor cube UV islands.
+    # Large contrasting trim defines the silhouette even at distance.
+    # Helmet front 8..15 x 8..15
+    L([(8,15),(8,11),(9,9),(10,8)],trim,width=1)
+    L([(15,15),(15,11),(14,9),(13,8)],trim,width=1)
+    L([(9,15),(11,14),(12,15),(14,14)],shine)
+    P(10,10,core); P(13,10,core)
+    # Helmet both side panels (0..7 and 16..23)
+    for x in (0,16):
+        L([(x+1,10),(x+3,8),(x+6,10)],trim)
+        L([(x+1,13),(x+3,14),(x+6,13)],high)
+        P(x+3,11,gem)
+    # Chest FRONT face has a polished torso centerpiece with two
+    # distinct shoulder bosses and crosscut facets.
+    L([(20,21),(22,21),(24,23),(26,21),(27,21)],trim)
+    L([(20,25),(22,27),(24,25),(26,27),(27,25)],high)
+    L([(21,29),(23,30),(25,30),(27,29)],trim)
+    P(24,24,core)
+    for x in (16,28):
+        L([(x,23),(x+2,21),(x+3,23)],trim)
+        P(x+2,25,shine)
+    # Arm front/side: crystal guards and high-contrast ornamental cuffs.
+    for x in (40,44,48,52):
+        L([(x+1,20),(x+2,21),(x+2,23)],trim)
+        L([(x,28),(x+3,28)],trim)
+        P(x+1,25,core)
+    # Leg greaves on every UV face.
+    for x in (0,4,8,12):
+        L([(x+1,21),(x+2,23),(x+1,25)],shine)
+        L([(x,27),(x+1,28),(x+3,27)],trim)
+        L([(x,30),(x+3,30)],high)
+    if kind=="amethyst":
+        # Amethyst is spiky / arcane, with brighter crystal veins.
+        for cx,cy in ((12,7),(23,23),(24,27),(3,25),(7,10)):
+            P(cx,cy,core)
+        L([(20,23),(22,24),(21,26)],shine)
+        L([(27,23),(25,24),(26,26)],shine)
+        L([(10,12),(12,9),(14,12)],core)
+        L([(20,26),(22,28),(20,30)],trim)
+        L([(27,26),(25,28),(27,30)],trim)
+    else:
+        # Emerald is royal, with strong gilded plate lines.
+        L([(9,9),(12,8),(14,9)],trim)
+        L([(20,22),(23,24),(24,23),(25,24),(27,22)],trim)
+        L([(20,30),(24,28),(27,30)],trim)
+        for x in (40,44,48,52):
+            L([(x,30),(x+3,30)],trim)
+        for x in (0,4,8,12):
+            L([(x,22),(x+3,22)],trim)
     if im.getbbox() is None:raise RuntimeError("Empty armor UV for "+kind)
     return im.resize((256,128),Image.Resampling.NEAREST)
 
