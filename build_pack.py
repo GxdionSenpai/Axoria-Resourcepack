@@ -471,6 +471,107 @@ for gear_name,source_name in (
         }
     },separators=(",",":")).encode("utf-8")
 
+# Emerald & Amethyst custom wearable armor. These are true vanilla-format
+# 64x32 UV maps (helmet/body/arms/boots and leggings), not preview images.
+# No vanilla armor assets are overwritten. Equipped Axoria pieces select
+# axoria:emerald / axoria:amethyst through their Equippable component.
+from PIL import ImageDraw
+
+def make_axoria_armor_layer(kind,leggings=False):
+    if kind=="emerald":
+        dark=(8,41,31,255); base=(16,91,58,255)
+        light=(43,168,102,255); bright=(91,232,151,255)
+        edge=(5,27,26,255); metal=(233,193,90,255)
+        glow=(188,255,189,255)
+    else:
+        dark=(32,18,60,255); base=(75,42,118,255)
+        light=(138,77,202,255); bright=(201,133,252,255)
+        edge=(20,13,44,255); metal=(184,177,226,255)
+        glow=(247,215,255,255)
+    image=Image.new("RGBA",(64,32),(0,0,0,0))
+    draw=ImageDraw.Draw(image)
+    # Classic Minecraft armor UV islands: 32x16 helmet, torso 16x16,
+    # 16x16 arms, and 16x16 legs. Side faces shade darker than front.
+    def panel(x,y,w,h,shine=False):
+        if w<=0 or h<=0:return
+        draw.rectangle((x,y,x+w-1,y+h-1),fill=edge)
+        if w>2 and h>2:draw.rectangle((x+1,y+1,x+w-2,y+h-2),fill=base)
+        draw.line((x+1,y+1,x+w-2,y+1),fill=light)
+        draw.line((x+1,y+1,x+1,y+h-2),fill=light)
+        draw.line((x+w-2,y+2,x+w-2,y+h-2),fill=dark)
+        if shine and h>=6 and w>=6:
+            draw.line((x+2,y+3,x+w-3,y+3),fill=bright)
+            draw.point((x+3,y+2),fill=glow)
+    def gem(cx,cy,size=2):
+        draw.polygon([(cx,cy-size),(cx+size,cy),(cx,cy+size),(cx-size,cy)],
+                     fill=bright,outline=edge)
+        draw.point((cx,cy-1),fill=glow)
+    # Helmet top, lower rim and sides. The crown and front have stylized
+    # gold/pearl trim, a glowing faceted forehead crystal and cheek guards.
+    for x,y,w,h in ((8,0,8,8),(16,0,8,8),(0,8,8,8),
+                    (8,8,8,8),(16,8,8,8),(24,8,8,8)):
+        panel(x,y,w,h,shine=(x==8))
+    if not leggings:
+        for x in (8,16,24):
+            draw.line((x+1,13,x+6,13),fill=metal)
+        gem(12,10,2)
+        draw.line((10,14,14,14),fill=metal)
+        draw.point((9,11),fill=glow);draw.point((15,11),fill=glow)
+    # Chestplate and gauntlets: armor plate edges + angular chest gem.
+    for x,y,w,h in ((20,16,8,4),(28,16,8,4),
+                    (16,20,4,12),(20,20,8,12),(28,20,4,12),
+                    (32,20,8,12),(40,16,8,4),(48,16,8,4),
+                    (40,20,4,12),(44,20,4,12),(48,20,4,12),
+                    (52,20,4,12)):
+        panel(x,y,w,h,shine=(x in (20,44)))
+    # Bracer and torso trims, perfectly aligned to original armor cuboids.
+    draw.line((21,22,26,22),fill=metal)
+    draw.line((21,29,26,29),fill=metal)
+    gem(24,25,2)
+    for x in (40,44,48,52):
+        draw.line((x+1,28,x+2,28),fill=metal)
+        draw.point((x+1,23),fill=bright)
+    if kind=="emerald":
+        # Emerald sentinel: gilded plate seams and clean royal chevrons.
+        draw.line((21,26,23,28),fill=metal)
+        draw.line((25,28,27,26),fill=metal)
+        draw.line((9,5,14,5),fill=metal)
+    else:
+        # Amethyst arcane armor: clustered violet crystals and silvery runes.
+        draw.line((21,27,23,30),fill=glow)
+        draw.line((25,30,27,27),fill=glow)
+        draw.point((9,5),fill=glow)
+        draw.point((14,5),fill=glow)
+    # Leg cubes use the 0..16 x 16..32 map, in both armor layers.
+    for x,y,w,h in ((4,16,4,4),(8,16,4,4),(0,20,4,12),
+                    (4,20,4,12),(8,20,4,12),(12,20,4,12)):
+        panel(x,y,w,h,shine=(x==4))
+        if y==20:
+            draw.line((x+1,26,x+2,26),fill=metal)
+            draw.point((x+1,29),fill=bright)
+    if leggings:
+        # Leggings layer is lighter around the joints, so boots/leg
+        # segments remain visually readable beneath the cuirass.
+        draw.line((20,20,27,20),fill=metal)
+        draw.line((4,23,7,23),fill=glow)
+        draw.line((8,23,11,23),fill=glow)
+    if image.getbbox() is None:
+        raise ValueError("Blank custom armor layer: "+kind)
+    return image
+
+for armor_id in ("emerald","amethyst"):
+    for layer_name,is_leggings in (("humanoid",False),("humanoid_leggings",True)):
+        texture=make_axoria_armor_layer(armor_id,is_leggings)
+        output_png=BytesIO()
+        texture.save(output_png,format="PNG",optimize=True)
+        files["assets/axoria/textures/entity/equipment/"+layer_name+"/"+armor_id+".png"]=output_png.getvalue()
+    files["assets/axoria/equipment/"+armor_id+".json"]=json.dumps({
+        "layers":{
+            "humanoid":[{"texture":"axoria:"+armor_id}],
+            "humanoid_leggings":[{"texture":"axoria:"+armor_id}]
+        }
+    },separators=(",",":")).encode("utf-8")
+
 # Validate the generated icon mapping; fail publishing if it is accidentally
 # encoded as six literal characters ('\\uE000') or missing its font provider.
 font_check=json.loads(files[font_file])
