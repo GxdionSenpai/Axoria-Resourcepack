@@ -562,6 +562,33 @@ for gear_name in ("emerald","amethyst"):
             "model":{"type":"minecraft:model","model":"axoria:item/"+art_name}
         },separators=(",",":")).encode("utf-8")
 
+# Optional-icon fallback: items keep their normal minecraft:leather_* item
+# model, with a numeric CMD only. If Axoria is installed, the range dispatch
+# selects the 128px recolored diamond sprite; without the pack Minecraft
+# renders the original dyeable leather icon instead of a black/pink cube.
+for part_index,part in enumerate(armor_parts):
+    vanilla="leather_"+part
+    path="assets/minecraft/items/"+vanilla+".json"
+    if path in files:
+        existing=json.loads(files[path].decode("utf-8"))["model"]
+    else:
+        # Vanilla leather armor has dye tint default and uses vanilla model.
+        existing={"type":"minecraft:model","model":"minecraft:item/"+vanilla,
+                  "tints":[{"type":"minecraft:dye","default":[160,101,64]}]}
+    choices=[]
+    for theme,number in (("emerald",1301+part_index),("amethyst",1311+part_index)):
+        model={"type":"minecraft:model","model":"axoria:item/"+theme+"_"+part}
+        choices.extend([
+            {"threshold":number,"model":model},
+            {"threshold":number+0.5,"model":existing}
+        ])
+    files[path]=json.dumps({"model":{
+        "type":"minecraft:range_dispatch",
+        "property":"minecraft:custom_model_data","index":0,
+        "fallback":existing,
+        "entries":sorted(choices,key=lambda x:x["threshold"])
+    }},separators=(",",":")).encode("utf-8")
+
 # Fail pack release instead of silently shipping blank, corrupt or shared
 # armor art. Both equipped variants have two independent 256x128 atlases,
 # and eight exact 128x128 individual inventory textures.
