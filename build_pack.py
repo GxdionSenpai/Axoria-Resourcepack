@@ -637,18 +637,10 @@ for idx,part in enumerate(armor_parts):
 import base64 as beta_base64
 beta_vanilla=json.loads(Path("beta-vanilla-sprites.json").read_text())
 def beta_sprite(kind):
-    if kind=="template":
-        # The upgrade template remains visually separate from a gold ingot.
-        from PIL import ImageDraw as BetaDraw
-        im=Image.new("RGBA",(16,16),(0,0,0,0))
-        draw=BetaDraw.Draw(im)
-        draw.rectangle((3,1,12,14),fill=(93,41,8,255))
-        draw.rectangle((4,2,11,13),fill=(255,162,42,255))
-        draw.rectangle((5,3,10,12),fill=(204,95,20,255))
-        draw.polygon([(7,4),(10,7),(8,9),(5,7)],fill=(255,222,111,255))
-        draw.rectangle((7,10,9,11),fill=(255,222,111,255))
-        return im.resize((128,128),Image.Resampling.NEAREST)
-    vanilla="gold_ingot" if kind=="ingot" else "golden_"+kind
+    # Recolour the ORIGINAL vanilla upgrade template; preserve its shape.
+    vanilla=("gold_ingot" if kind=="ingot" else
+             "netherite_upgrade_smithing_template" if kind=="template"
+             else "golden_"+kind)
     with Image.open(BytesIO(beta_base64.b64decode(beta_vanilla[vanilla]))) as source_image:
         im=source_image.convert("RGBA")
     if im.size!=(16,16):
@@ -658,6 +650,13 @@ def beta_sprite(kind):
         if a==0:return (0,0,0,0)
         # Preserve the exact Mojang shading, transparent shape and tool handle.
         # Only the GOLD parts get a warmer, richer orange Beta palette.
+        if kind=="template":
+            # Gold-orange mapping of the original vanilla texture palette.
+            luma=0.2126*r+0.7152*g+0.0722*b
+            if luma < 40:return (58,23,10,a)
+            if luma < 85:return (120,51,12,a)
+            if luma < 140:return (203,99,22,a)
+            return (255,185,67,a)
         if r>=145 and g>=93 and r>g*1.12:
             strength=0.76 if kind=="ingot" else 0.67
             return (min(255,int(r*1.05)),int(g*strength),int(b*0.87),a)
