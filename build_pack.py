@@ -631,50 +631,38 @@ for idx,part in enumerate(armor_parts):
             {"threshold":1401.5+idx,"model":default}
         ]}},separators=(",",":")).encode("utf-8")
 
-# Bright orange-gold pixel-art sprites for BETA ingot, template and tools.
-from PIL import ImageDraw as BetaDraw
+# Recolour authentic vanilla gold sprites; never redraw their silhouettes.
+# The in-repository source files reproduce Minecraft's original 16x16 pixel
+# layout. Recolour only the gold facets and preserve the dark wood tool handles.
+import base64 as beta_base64
+beta_vanilla=json.loads(Path("beta-vanilla-sprites.json").read_text())
 def beta_sprite(kind):
-    im=Image.new("RGBA",(16,16),(0,0,0,0))
-    draw=BetaDraw.Draw(im)
-    dark=(93,41,8,255);mid=(204,95,20,255)
-    gold=(255,162,42,255);light=(255,222,111,255)
-    handle=(92,49,24,255);handle2=(155,95,37,255)
-    if kind=="ingot":
-        draw.polygon([(3,10),(5,6),(12,6),(14,11),(11,13),(2,13)],fill=dark)
-        draw.polygon([(4,9),(6,6),(11,6),(13,10),(11,11),(3,11)],fill=gold)
-        draw.line([(6,7),(11,7)],fill=light,width=2)
-    elif kind=="template":
-        draw.rectangle((3,1,12,14),fill=dark)
-        draw.rectangle((4,2,11,13),fill=gold)
-        draw.rectangle((5,3,10,12),fill=mid)
-        draw.polygon([(7,4),(10,7),(8,9),(5,7)],fill=light)
-        draw.rectangle((7,10,9,11),fill=light)
-    else:
-        # Same diagonal handle style as vanilla Minecraft tools.
-        draw.line([(4,13),(11,6)],fill=dark,width=4)
-        draw.line([(4,12),(10,6)],fill=handle,width=2)
-        draw.line([(5,11),(9,7)],fill=handle2,width=1)
-        if kind=="pickaxe":
-            draw.line([(3,3),(12,3)],fill=dark,width=4)
-            draw.line([(3,2),(12,2)],fill=gold,width=2)
-            draw.point((2,4),fill=light)
-        elif kind=="axe":
-            draw.polygon([(8,1),(13,2),(14,7),(11,9),(7,6)],fill=dark)
-            draw.polygon([(8,2),(12,3),(13,6),(10,8),(8,6)],fill=gold)
-            draw.line([(9,3),(11,3)],fill=light,width=2)
-        elif kind=="shovel":
-            draw.polygon([(10,1),(14,4),(13,7),(10,9),(7,6),(8,3)],fill=dark)
-            draw.polygon([(10,2),(13,4),(12,6),(10,8),(8,6),(9,4)],fill=gold)
-            draw.line([(10,3),(12,4)],fill=light,width=1)
-        elif kind=="hoe":
-            draw.line([(8,3),(13,3)],fill=dark,width=4)
-            draw.line([(9,2),(13,2)],fill=gold,width=2)
-            draw.line([(8,4),(8,7)],fill=gold,width=2)
-        elif kind=="sword":
-            draw.line([(5,12),(12,2)],fill=dark,width=5)
-            draw.line([(5,11),(11,3)],fill=gold,width=3)
-            draw.line([(7,9),(11,3)],fill=light,width=1)
-            draw.line([(3,9),(8,13)],fill=mid,width=3)
+    if kind=="template":
+        # The upgrade template remains visually separate from a gold ingot.
+        from PIL import ImageDraw as BetaDraw
+        im=Image.new("RGBA",(16,16),(0,0,0,0))
+        draw=BetaDraw.Draw(im)
+        draw.rectangle((3,1,12,14),fill=(93,41,8,255))
+        draw.rectangle((4,2,11,13),fill=(255,162,42,255))
+        draw.rectangle((5,3,10,12),fill=(204,95,20,255))
+        draw.polygon([(7,4),(10,7),(8,9),(5,7)],fill=(255,222,111,255))
+        draw.rectangle((7,10,9,11),fill=(255,222,111,255))
+        return im.resize((128,128),Image.Resampling.NEAREST)
+    vanilla="gold_ingot" if kind=="ingot" else "golden_"+kind
+    with Image.open(BytesIO(beta_base64.b64decode(beta_vanilla[vanilla]))) as source_image:
+        im=source_image.convert("RGBA")
+    if im.size!=(16,16):
+        raise ValueError("Invalid vanilla gold source sprite: "+vanilla)
+    def tint(pixel):
+        r,g,b,a=pixel
+        if a==0:return (0,0,0,0)
+        # Preserve the exact Mojang shading, transparent shape and tool handle.
+        # Only the GOLD parts get a warmer, richer orange Beta palette.
+        if r>=145 and g>=93 and r>g*1.12:
+            strength=0.76 if kind=="ingot" else 0.67
+            return (min(255,int(r*1.05)),int(g*strength),int(b*0.87),a)
+        return pixel
+    im.putdata([tint(px) for px in im.getdata()])
     return im.resize((128,128),Image.Resampling.NEAREST)
 beta_base={
     "gold_ingot":("ingot",1460),
@@ -691,7 +679,7 @@ for vanilla,(kind,cmd) in beta_base.items():
     name="beta_"+kind
     files["assets/axoria/textures/item/"+name+".png"]=bio.getvalue()
     files["assets/axoria/models/item/"+name+".json"]=json.dumps({
-        "parent":"minecraft:item/generated",
+        "parent":"minecraft:item/generated" if kind in ("ingot","template") else "minecraft:item/handheld",
         "textures":{"layer0":"axoria:item/"+name}
     },separators=(",",":")).encode()
     path="assets/minecraft/items/"+vanilla+".json"
