@@ -35,7 +35,9 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f pack-info.properties
+          # Publish the exact ZIP and its matching SHA-1 manifest atomically.
+          # Clients fetch this direct raw URL without a GitHub release redirect.
+          git add -f pack-info.properties axoria-resourcepack.zip
           if ! git diff --cached --quiet; then
             git commit -m 'Update pack manifest [skip ci]'
             # Rebase onto latest main before push to handle edits made while the job runs.
