@@ -156,46 +156,46 @@ items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
 
-# Approved Guardian Season 1 weapon sprites, looking right in the standard
-# Minecraft inventory orientation. The compact atlas stores three indexed
-# 64x64 sprites with binary transparency, then scales losslessly to 128x128.
-# Keeping the approved original art in the repository means pack releases
-# are deterministic and do not depend on a live image service.
-import zlib
-import base64
-weapon_bytes=zlib.decompress(base64.b85decode(
-    Path("season1_guardian_weapons.b85").read_text().strip()))
-cursor=0
+# Original vanilla 1.21.4 sprites (Minecraft assets), recolored only.
+# Embed the small source PNGs so builds are deterministic and offline.
+guardian_vanilla={"diamond_sword":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAJFBMVEUAAAAOPzYIJSAz68uk/fArx6weincVY1VoTh5JNhUoHguJZycazUdMAAAAAXRSTlMAQObYZgAAAExJREFUGNN1jsENwDAMAgGndpLuv29/jZFa/+4QwkA/ks5jyPky8cHxwyQAxslZNAaYiux9Zlb4A0XjNcVu1r0hvYacGwB0Rq0OSC4ehwkBE0lygnsAAAAASUVORK5CYII=","bow":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaklEQVR42mNgoCfwNBP9j4xJ1tSZrv4/w08OjEFsDTnu/wQ1wjTBNCBjvJqzs7PBGrFpcHFxIax52rRpYBpdnnaaYQaAnE22ZlwhS1Azsu3oBhClGZcL6KMZm/NJ0oxuAMmaCcUA0YBczQDVGni1vuKfywAAAABJRU5ErkJggg==","bow_pulling_0":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNolyaEOwjAAANFHMG2/go8iwc4QSD0hQVUiUSOdqqrYV25Z1V3unADOF8T6o1PndyZN9ZHXhn7bUbDcCYjXbsgrTQrmpgf4N+lpFAUx84X4EQwJhWMN0oANNRsW0569NXMAAAAASUVORK5CYII=","bow_pulling_1":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNpFiiESgCAUBTcKybN4FmesFGWGbjERjSYdTKQfOKXAD76yOzuPfyNAumCqSD6AdclvJQOylEIE3hWamFlgAMxuXZc7I/3yZKyLWhBQacEEOGlyKGtRQlZ8XgEYhJSXcScAAAAASUVORK5CYII=","bow_pulling_2":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAkklEQVR42mNgGFTgPxCgi3maif7HhTEM2Lhx4/8bN278R9bYma7+P8NPDkzDMIyvIceNaQhIECSZnZ0NVgji48JYvQGyFdkQXN51cXH5j1UzSNO0adPghpBsAMjZMJtxGYJTM7aAwWYIXtuxBQ66ISS5AJshZBmAL0yINgCrzfjCAKQBGePNB8guIEoDLj+SqgcAmHKbjbKf/yEAAAAASUVORK5CYII=","trident":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbUlEQVQ4y2NgoAeYNm3afxCgSPONGzfABoBoog3DpRkkTrQBZGsGgezs7P96cQH/0TUT7Q2Q5oi5fWBD0DWDDCfKAIfKTDBGdglRmsXcLcEaQTQIgzTBMNE2gzSSHO8wf480zWQHGCy6yNYMBACktqum4kbbjgAAAABJRU5ErkJggg=="}
+def guardian_weapon_sprite(source,elder=False):
+    sprite=Image.open(BytesIO(base64.b64decode(guardian_vanilla[source]))).convert("RGBA")
+    palette=((13,34,32),(30,70,60),(58,112,94),(100,163,141),(177,213,185)) if elder else (
+        (21,48,49),(43,92,94),(74,143,138),(126,190,177),(207,237,218))
+    colors=[]
+    for r,g,b,a in sprite.getdata():
+        if not a:
+            colors.append((0,0,0,0))
+            continue
+        # Preserve the original pixel silhouette and tonal contrast.
+        v=(0.2126*r+0.7152*g+0.0722*b)/255*4
+        i=min(3,int(v)); t=v-i
+        colors.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
+    sprite.putdata(colors)
+    sprite=sprite.resize((128,128),Image.Resampling.NEAREST)
+    assert {a for *_,a in sprite.getdata()}=={0,255}
+    output=BytesIO()
+    sprite.save(output,format="PNG",optimize=True)
+    return output.getvalue()
+
 for item_name,vanilla_item,model_id in (
     ("s1_gezeitenklinge","diamond_sword",1201),
     ("s1_tiefenjaegerbogen","bow",1202),
     ("s1_elderdreizack","trident",1203)):
-    palette_size=weapon_bytes[cursor];cursor+=1
-    palette=[(0,0,0,0)]
-    for _ in range(palette_size):
-        r,g,b=weapon_bytes[cursor:cursor+3];cursor+=3
-        palette.append((r,g,b,255))
-    index_bytes=weapon_bytes[cursor:cursor+64*64];cursor+=64*64
-    sprite=Image.new("RGBA",(64,64))
-    sprite.putdata([palette[index] for index in index_bytes])
-    sprite=sprite.resize((128,128),Image.Resampling.NEAREST)
-    if {a for *_,a in sprite.getdata()}!={0,255}:
-        raise ValueError("Season 1 texture must be strictly transparent/opaque: "+item_name)
-    out_buffer=BytesIO()
-    sprite.save(out_buffer,format="PNG",optimize=True)
-    files["assets/axoria/textures/item/"+item_name+".png"]=out_buffer.getvalue()
-    files["assets/axoria/models/item/"+item_name+".json"]=json.dumps({
-        "parent":"minecraft:item/generated",
-        "textures":{"layer0":"axoria:item/"+item_name}
-    },separators=(",",":")).encode()
-    # Direct minecraft:item_model component points here (modern clients).
-    # Keep the numerical CMD fallback below for older Season-1 item stacks.
+    variants=[(item_name,vanilla_item)]
+    if vanilla_item=="bow":
+        variants.extend((item_name+"_pulling_"+str(i),"bow_pulling_"+str(i)) for i in range(3))
+    for name,source in variants:
+        files["assets/axoria/textures/item/"+name+".png"]=guardian_weapon_sprite(source,vanilla_item=="trident")
+        files["assets/axoria/models/item/"+name+".json"]=json.dumps({
+            "parent":"minecraft:item/handheld" if vanilla_item=="diamond_sword" else "minecraft:item/generated",
+            "textures":{"layer0":"axoria:item/"+name}
+        },separators=(",",":")).encode()
     files["assets/axoria/items/"+item_name+".json"]=json.dumps({
         "model":{"type":"minecraft:model","model":"axoria:item/"+item_name}
     },separators=(",",":")).encode()
     items.append((vanilla_item,item_name,model_id))
-if cursor!=len(weapon_bytes):
-    raise ValueError("Invalid Guardian weapon art payload: trailing bytes")
 
 # These exact IDs match AxoriaCrates.keyTextureId(). Unmarked vanilla
 # TRIAL_KEYs, and all players who decline the entire pack, stay vanilla.
@@ -265,8 +265,15 @@ for base, models in grouped.items():
             "fallback":chest_model("normal")}
     entries=[]
     for custom,value in sorted(models,key=lambda pair:pair[1]):
-        entries.append({"threshold":value,"model":{"type":"minecraft:model",
-            "model":"axoria:item/"+custom}})
+        custom_model={"type":"minecraft:model","model":"axoria:item/"+custom}
+        if custom=="s1_tiefenjaegerbogen":
+            custom_model={"type":"minecraft:condition","property":"minecraft:using_item",
+                "on_false":custom_model,
+                "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:use_duration","scale":0.05,
+                    "fallback":{"type":"minecraft:model","model":"axoria:item/"+custom+"_pulling_0"},
+                    "entries":[{"threshold":0.65,"model":{"type":"minecraft:model","model":"axoria:item/"+custom+"_pulling_1"}},
+                               {"threshold":0.9,"model":{"type":"minecraft:model","model":"axoria:item/"+custom+"_pulling_2"}}]}}
+        entries.append({"threshold":value,"model":custom_model})
         entries.append({"threshold":value+0.5,"model":vanilla_model})
     files["assets/minecraft/items/"+base+".json"]=json.dumps({
         "model":{"type":"minecraft:range_dispatch",
@@ -328,7 +335,7 @@ for path, data in list(files.items()):
         # between Sternenbogen's bow limbs and string, the crab claw opening
         # and the rocket's actual muzzle. The old generic "fill enclosed holes"
         # pass destroyed these important original art details.
-        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"}:
+        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack")):
             image=Image.open(BytesIO(data)).convert("RGBA")
             if image.size!=(128,128) or {a for *_,a in image.getdata()}!={0,255}:
                 raise ValueError("Custom Axoria 128px item texture invalid: "+path)
