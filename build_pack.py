@@ -156,7 +156,7 @@ items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
 
-# Original vanilla 1.21.4 sprites (Minecraft assets), recolored only.
+# Original vanilla 1.21.4 sprites with small opaque Guardian ornaments.
 # Embed the small source PNGs so builds are deterministic and offline.
 guardian_vanilla={"diamond_sword":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAJFBMVEUAAAAOPzYIJSAz68uk/fArx6weincVY1VoTh5JNhUoHguJZycazUdMAAAAAXRSTlMAQObYZgAAAExJREFUGNN1jsENwDAMAgGndpLuv29/jZFa/+4QwkA/ks5jyPky8cHxwyQAxslZNAaYiux9Zlb4A0XjNcVu1r0hvYacGwB0Rq0OSC4ehwkBE0lygnsAAAAASUVORK5CYII=","bow":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaklEQVR42mNgoCfwNBP9j4xJ1tSZrv4/w08OjEFsDTnu/wQ1wjTBNCBjvJqzs7PBGrFpcHFxIax52rRpYBpdnnaaYQaAnE22ZlwhS1Azsu3oBhClGZcL6KMZm/NJ0oxuAMmaCcUA0YBczQDVGni1vuKfywAAAABJRU5ErkJggg==","bow_pulling_0":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNolyaEOwjAAANFHMG2/go8iwc4QSD0hQVUiUSOdqqrYV25Z1V3unADOF8T6o1PndyZN9ZHXhn7bUbDcCYjXbsgrTQrmpgf4N+lpFAUx84X4EQwJhWMN0oANNRsW0569NXMAAAAASUVORK5CYII=","bow_pulling_1":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNpFiiESgCAUBTcKybN4FmesFGWGbjERjSYdTKQfOKXAD76yOzuPfyNAumCqSD6AdclvJQOylEIE3hWamFlgAMxuXZc7I/3yZKyLWhBQacEEOGlyKGtRQlZ8XgEYhJSXcScAAAAASUVORK5CYII=","bow_pulling_2":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAkklEQVR42mNgGFTgPxCgi3maif7HhTEM2Lhx4/8bN278R9bYma7+P8NPDkzDMIyvIceNaQhIECSZnZ0NVgji48JYvQGyFdkQXN51cXH5j1UzSNO0adPghpBsAMjZMJtxGYJTM7aAwWYIXtuxBQ66ISS5AJshZBmAL0yINgCrzfjCAKQBGePNB8guIEoDLj+SqgcAmHKbjbKf/yEAAAAASUVORK5CYII=","trident":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbUlEQVQ4y2NgoAeYNm3afxCgSPONGzfABoBoog3DpRkkTrQBZGsGgezs7P96cQH/0TUT7Q2Q5oi5fWBD0DWDDCfKAIfKTDBGdglRmsXcLcEaQTQIgzTBMNE2gzSSHO8wf480zWQHGCy6yNYMBACktqum4kbbjgAAAABJRU5ErkJggg=="}
 def guardian_weapon_sprite(source,elder=False):
@@ -173,6 +173,56 @@ def guardian_weapon_sprite(source,elder=False):
         i=min(3,int(v)); t=v-i
         colors.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
     sprite.putdata(colors)
+    # Work on a 32px pixel grid: small solid coral spurs and crystal
+    # inlays, rather than oversized ornaments or translucent glows.
+    sprite=sprite.resize((32,32),Image.Resampling.NEAREST)
+    original=sprite.copy()
+    coral=(220,126,64,255) if not elder else (191,151,92,255)
+    edge=(24,69,64,255) if not elder else (18,49,40,255)
+    crystal=(173,235,208,255) if not elder else (155,209,163,255)
+    def opaque(x,y):
+        return 0<=x<32 and 0<=y<32 and original.getpixel((x,y))[3]==255
+    def spur(x,y,dx,dy):
+        # A two-pixel connected fin with a dark root and bright tip.
+        if not opaque(x,y):return
+        for step,color in ((1,edge),(2,coral)):
+            xx,yy=x+dx*step,y+dy*step
+            if not (0<=xx<32 and 0<=yy<32) or opaque(xx,yy):break
+            sprite.putpixel((xx,yy),color)
+    if source=="diamond_sword":
+        # Pair of Guardian-like spines along the blade, crystal at guard.
+        for y in (8,14):
+            xs=[x for x in range(8,30) if opaque(x,y)]
+            if xs:
+                spur(min(xs),y,-1,0)
+                spur(max(xs),y,1,0)
+        for x,y in ((10,21),(11,20),(12,19)):
+            if opaque(x,y):sprite.putpixel((x,y),crystal)
+    elif source.startswith("bow"):
+        # Coral fin tips on the outer limbs, never on the string or arrow.
+        for y in (5,10,21,26):
+            xs=[x for x in range(32) if opaque(x,y)]
+            if not xs:continue
+            # Bow limb is the thickest local run; avoid one-pixel string.
+            runs=[]
+            for x in xs:
+                if runs and x==runs[-1][-1]+1:runs[-1].append(x)
+                else:runs.append([x])
+            limb=max(runs,key=len)
+            if len(limb)>=3:
+                x=limb[0] if y<16 else limb[-1]
+                spur(x,y,-1 if y<16 else 1,0)
+                sprite.putpixel((x,y),crystal)
+    else:
+        # Dark prismarine prong shoulders and a pair of shaft fins.
+        for y in (8,12,18):
+            xs=[x for x in range(32) if opaque(x,y)]
+            if xs:
+                spur(min(xs),y,-1,0)
+                spur(max(xs),y,1,0)
+        for y in (19,23):
+            xs=[x for x in range(32) if opaque(x,y)]
+            if xs:sprite.putpixel((xs[len(xs)//2],y),crystal)
     sprite=sprite.resize((128,128),Image.Resampling.NEAREST)
     assert {a for *_,a in sprite.getdata()}=={0,255}
     output=BytesIO()
