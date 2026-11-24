@@ -430,47 +430,6 @@ for filename,hover,disabled in (
         "gui":{"scaling":{"type":"nine_slice","width":200,"height":20,"border":3}}
     },separators=(",",":")).encode("utf-8")
 
-# Season 1 wearable Guardian/Elder-Guardian armor from the user's EXACT
-# 64x64 NameMC skins. Equipment assets are selected per item via
-# ItemMeta.getEquippable().setModel(axoria:s1_guardian / s1_elder_guardian).
-# Vanilla leather armor and all other custom items remain unaffected.
-for gear_name,source_name in (
-    ("s1_guardian","season1_guardian_skin.png"),
-    ("s1_elder_guardian","season1_elder_guardian_skin.png")
-):
-    with Image.open(source_name) as skin_file:
-        skin=skin_file.convert("RGBA")
-    if skin.size!=(64,64):
-        raise ValueError("Season 1 skin must be 64x64: "+source_name)
-    # Standard player skin and Minecraft humanoid armor share the classic
-    # helmet UV layout. Merge modern second-head-layer pixels into the
-    # base head for the exact eye/face markings from each uploaded skin.
-    upper=skin.crop((0,0,64,32)).copy()
-    for sy in range(16):
-        for sx in range(32):
-            under=upper.getpixel((sx,sy))
-            above=skin.getpixel((sx+32,sy))
-            if above[3]:
-                composite=Image.alpha_composite(
-                    Image.new("RGBA",(1,1),under),
-                    Image.new("RGBA",(1,1),above))
-                upper.putpixel((sx,sy),composite.getpixel((0,0)))
-    # The skin's head hat-layer data isn't a separate armor cube.
-    for sy in range(16):
-        for sx in range(32,64):upper.putpixel((sx,sy),(0,0,0,0))
-    lower=Image.new("RGBA",(64,32),(0,0,0,0))
-    lower.paste(skin.crop((0,16,16,32)),(0,16))
-    for category,image in (("humanoid",upper),("humanoid_leggings",lower)):
-        encoded=BytesIO()
-        image.save(encoded,format="PNG",optimize=True)
-        files["assets/axoria/textures/entity/equipment/"+category+"/"+gear_name+".png"]=encoded.getvalue()
-    files["assets/axoria/equipment/"+gear_name+".json"]=json.dumps({
-        "layers":{
-            "humanoid":[{"texture":"axoria:"+gear_name}],
-            "humanoid_leggings":[{"texture":"axoria:"+gear_name}]
-        }
-    },separators=(",",":")).encode("utf-8")
-
 # Emerald & Amethyst custom wearable armor. These are true vanilla-format
 # 64x32 UV maps (helmet/body/arms/boots and leggings), not preview images.
 # No vanilla armor assets are overwritten. Equipped Axoria pieces select
@@ -489,6 +448,12 @@ def recolor_diamond(source,kind,output_size):
     elif kind=="emerald":
         gradient=((6,32,21),(12,80,43),(21,147,75),
                   (45,205,111),(125,255,181))
+    elif kind=="s1_guardian":
+        gradient=((29,65,65),(53,106,103),(79,145,134),
+                  (116,179,165),(169,218,196))
+    elif kind=="s1_elder_guardian":
+        gradient=((9,27,24),(20,52,44),(34,82,67),
+                  (54,113,94),(86,151,123))
     else:
         gradient=((27,11,53),(59,26,102),(111,52,174),
                   (172,104,231),(228,183,255))
@@ -517,7 +482,7 @@ def make_axoria_armor_layer(kind,leggings=False):
     if image.size!=(256,128):raise ValueError("Worn armor UV must remain 2:1")
     return image
 
-for armor_id in ("emerald","amethyst","beta"):
+for armor_id in ("emerald","amethyst","beta","s1_guardian","s1_elder_guardian"):
     for layer_name,is_leggings in (("humanoid",False),("humanoid_leggings",True)):
         texture=make_axoria_armor_layer(armor_id,is_leggings)
         output_png=BytesIO()
@@ -548,7 +513,7 @@ def make_custom_armor_icon(theme,piece):
 # Do NOT override assets/minecraft/items/leather_*.json: that previously
 # produced misleading common icons and damaged vanilla fallbacks.
 armor_parts=("helmet","chestplate","leggings","boots")
-for gear_name in ("emerald","amethyst","beta"):
+for gear_name in ("emerald","amethyst","beta","s1_guardian","s1_elder_guardian"):
     for armor_part in armor_parts:
         art_name=gear_name+"_"+armor_part
         image=make_custom_armor_icon(gear_name,armor_part)
@@ -579,7 +544,8 @@ for part_index,part in enumerate(armor_parts):
         existing={"type":"minecraft:model","model":"minecraft:item/"+vanilla,
                   "tints":[{"type":"minecraft:dye","default":[160,101,64]}]}
     choices=[]
-    for theme,number in (("emerald",1301+part_index),("amethyst",1311+part_index)):
+    for theme,number in (("emerald",1301+part_index),("amethyst",1311+part_index),
+                         ("s1_guardian",1321+part_index),("s1_elder_guardian",1331+part_index)):
         model={"type":"minecraft:model","model":"axoria:item/"+theme+"_"+part}
         choices.extend([
             {"threshold":number,"model":model},
@@ -595,7 +561,7 @@ for part_index,part in enumerate(armor_parts):
 # Fail pack release instead of silently shipping blank, corrupt or shared
 # armor art. Both equipped variants have two independent 256x128 atlases,
 # and eight exact 128x128 individual inventory textures.
-for gear_name in ("emerald","amethyst","beta"):
+for gear_name in ("emerald","amethyst","beta","s1_guardian","s1_elder_guardian"):
     path="assets/axoria/equipment/"+gear_name+".json"
     parsed=json.loads(files[path])
     for layer_name in ("humanoid","humanoid_leggings"):
