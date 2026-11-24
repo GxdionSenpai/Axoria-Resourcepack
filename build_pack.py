@@ -374,7 +374,7 @@ providers=[entry for entry in providers
            if not(isinstance(entry,dict) and entry.get("file")=="axoria:font/esc_logo.png")]
 providers.insert(0,{
     "type":"bitmap","file":"axoria:font/esc_logo.png",
-    "ascent":19,"height":105,"chars":[chr(0xE000)]
+    "ascent":32,"height":32,"chars":[chr(0xE000)]
 })
 files[font_file]=json.dumps({"providers":providers},ensure_ascii=False,separators=(",",":")).encode("utf-8")
 for lang in ("en_us","de_de"):
