@@ -159,6 +159,63 @@ items.append(("bow","sternenbogen_charged",1111))
 # Original vanilla 1.21.4 sprites with small opaque Guardian ornaments.
 # Embed the small source PNGs so builds are deterministic and offline.
 guardian_vanilla={"diamond_sword":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAJFBMVEUAAAAOPzYIJSAz68uk/fArx6weincVY1VoTh5JNhUoHguJZycazUdMAAAAAXRSTlMAQObYZgAAAExJREFUGNN1jsENwDAMAgGndpLuv29/jZFa/+4QwkA/ks5jyPky8cHxwyQAxslZNAaYiux9Zlb4A0XjNcVu1r0hvYacGwB0Rq0OSC4ehwkBE0lygnsAAAAASUVORK5CYII=","bow":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAaklEQVR42mNgoCfwNBP9j4xJ1tSZrv4/w08OjEFsDTnu/wQ1wjTBNCBjvJqzs7PBGrFpcHFxIax52rRpYBpdnnaaYQaAnE22ZlwhS1Azsu3oBhClGZcL6KMZm/NJ0oxuAMmaCcUA0YBczQDVGni1vuKfywAAAABJRU5ErkJggg==","bow_pulling_0":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNolyaEOwjAAANFHMG2/go8iwc4QSD0hQVUiUSOdqqrYV25Z1V3unADOF8T6o1PndyZN9ZHXhn7bUbDcCYjXbsgrTQrmpgf4N+lpFAUx84X4EQwJhWMN0oANNRsW0569NXMAAAAASUVORK5CYII=","bow_pulling_1":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAAD////Y2NixsbGWlpZra2uJZydoTh5ERERJNhUoHgt9szO9AAAAAXRSTlMAQObYZgAAAF5JREFUeNpFiiESgCAUBTcKybN4FmesFGWGbjERjSYdTKQfOKXAD76yOzuPfyNAumCqSD6AdclvJQOylEIE3hWamFlgAMxuXZc7I/3yZKyLWhBQacEEOGlyKGtRQlZ8XgEYhJSXcScAAAAASUVORK5CYII=","bow_pulling_2":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAkklEQVR42mNgGFTgPxCgi3maif7HhTEM2Lhx4/8bN278R9bYma7+P8NPDkzDMIyvIceNaQhIECSZnZ0NVgji48JYvQGyFdkQXN51cXH5j1UzSNO0adPghpBsAMjZMJtxGYJTM7aAwWYIXtuxBQ66ISS5AJshZBmAL0yINgCrzfjCAKQBGePNB8guIEoDLj+SqgcAmHKbjbKf/yEAAAAASUVORK5CYII=","trident":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbUlEQVQ4y2NgoAeYNm3afxCgSPONGzfABoBoog3DpRkkTrQBZGsGgezs7P96cQH/0TUT7Q2Q5oi5fWBD0DWDDCfKAIfKTDBGdglRmsXcLcEaQTQIgzTBMNE2gzSSHO8wf480zWQHGCy6yNYMBACktqum4kbbjgAAAABJRU5ErkJggg=="}
+# Sternenbogen: original bow silhouette and draw stages, with gold star arrowhead.
+def star_bow_sprite(source,charged):
+    im=Image.open(BytesIO(base64.b64decode(guardian_vanilla[source]))).convert("RGBA")
+    colors=[]
+    for r,g,b,a in im.getdata():
+        if not a:
+            colors.append((0,0,0,0));continue
+        v=(r+g+b)/765
+        if max(r,g,b)-min(r,g,b)<22:
+            c=(round(145+100*v),round(108+132*v),round(45+155*v))
+        else:
+            c=(round(25+65*v),round(24+100*v),round(85+145*v))
+        colors.append(c+(255,))
+    im.putdata(colors)
+    im=im.resize((32,32),Image.Resampling.NEAREST)
+    from PIL import ImageDraw
+    d=ImageDraw.Draw(im)
+    gold=(255,205,67,255) if not charged else (255,239,150,255)
+    outline=(117,68,24,255)
+    def star(x,y):
+        d.polygon([(x,y-3),(x+1,y-1),(x+3,y),(x+1,y+1),(x,y+3),
+                   (x-1,y+1),(x-3,y),(x-1,y-1)],fill=outline)
+        d.line((x-2,y,x+2,y),fill=gold)
+        d.line((x,y-2,x,y+2),fill=gold)
+        d.point((x,y),fill=(255,255,225,255))
+    if source.startswith("bow_pulling"):
+        # Vanilla loaded arrow points to the upper-left of the bow sprite.
+        # Locate its grey/white tip along the upper-left diagonal.
+        original=Image.open(BytesIO(base64.b64decode(guardian_vanilla[source]))).convert("RGBA")
+        candidates=[(x,y) for y in range(16) for x in range(16)
+                    if original.getpixel((x,y))[3] and max(original.getpixel((x,y))[:3])-min(original.getpixel((x,y))[:3])<22
+                    and min(original.getpixel((x,y))[:3])>90 and abs(x-y)<=2]
+        if candidates:
+            x,y=min(candidates,key=lambda p:p[0]+p[1])
+            star(max(3,min(28,x*2+1)),max(3,min(28,y*2+1)))
+        else:
+            star(5,5)
+    else:
+        # Small gold star on the bow grip, not a floating arrow.
+        points=[(x,y) for y in range(9,23) for x in range(9,23) if im.getpixel((x,y))[3]]
+        if points:
+            x,y=max(points,key=lambda p:p[0]-p[1])
+            star(x,y)
+    im=im.resize((128,128),Image.Resampling.NEAREST)
+    assert {a for *_,a in im.getdata()}=={0,255}
+    out=BytesIO();im.save(out,format="PNG",optimize=True)
+    return out.getvalue()
+
+for bow_name in ("sternenbogen","sternenbogen_charged"):
+    for suffix,source in [("","bow")]+[("_pulling_"+str(i),"bow_pulling_"+str(i)) for i in range(3)]:
+        name=bow_name+suffix
+        files["assets/axoria/textures/item/"+name+".png"]=star_bow_sprite(source,bow_name.endswith("_charged"))
+        files["assets/axoria/models/item/"+name+".json"]=json.dumps({
+            "parent":"minecraft:item/generated",
+            "textures":{"layer0":"axoria:item/"+name}
+        },separators=(",",":")).encode()
+
 def guardian_weapon_sprite(source,elder=False):
     sprite=Image.open(BytesIO(base64.b64decode(guardian_vanilla[source]))).convert("RGBA")
     palette=((13,34,32),(30,70,60),(58,112,94),(100,163,141),(177,213,185)) if elder else (
@@ -343,7 +400,7 @@ for base, models in grouped.items():
     entries=[]
     for custom,value in sorted(models,key=lambda pair:pair[1]):
         custom_model={"type":"minecraft:model","model":"axoria:item/"+custom}
-        if custom=="s1_tiefenjaegerbogen":
+        if custom in ("s1_tiefenjaegerbogen","sternenbogen","sternenbogen_charged"):
             custom_model={"type":"minecraft:condition","property":"minecraft:using_item",
                 "on_false":custom_model,
                 "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:use_duration","scale":0.05,
@@ -412,7 +469,7 @@ for path, data in list(files.items()):
         # between Sternenbogen's bow limbs and string, the crab claw opening
         # and the rocket's actual muzzle. The old generic "fill enclosed holes"
         # pass destroyed these important original art details.
-        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack")):
+        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack","sternenbogen")):
             image=Image.open(BytesIO(data)).convert("RGBA")
             if image.size!=(128,128) or {a for *_,a in image.getdata()}!={0,255}:
                 raise ValueError("Custom Axoria 128px item texture invalid: "+path)
