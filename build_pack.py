@@ -223,6 +223,33 @@ def guardian_weapon_sprite(source,elder=False):
         for y in (19,23):
             xs=[x for x in range(32) if opaque(x,y)]
             if xs:sprite.putpixel((xs[len(xs)//2],y),crystal)
+    # Larger readable motifs, still on the same opaque 32px grid.
+    from PIL import ImageDraw
+    draw=ImageDraw.Draw(sprite)
+    if source=="trident":
+        # Eye mounted on the shaft just below the prongs.
+        y=13
+        xs=[x for x in range(32) if opaque(x,y)]
+        if xs:
+            x=xs[len(xs)//2]
+            draw.polygon([(x-4,y),(x-2,y-3),(x+2,y-3),(x+4,y),
+                          (x+2,y+3),(x-2,y+3)],fill=(22,48,40,255))
+            draw.rectangle((x-2,y-1,x+2,y+1),fill=(219,205,164,255))
+            draw.rectangle((x-1,y-1,x+1,y+1),fill=(150,77,50,255))
+            draw.line((x,y-1,x,y+1),fill=(42,30,26,255))
+            draw.point((x-1,y-1),fill=(255,239,196,255))
+    elif source=="diamond_sword":
+        # A curling crest of sea foam at the blade/guard transition.
+        y=17
+        xs=[x for x in range(32) if opaque(x,y)]
+        if xs:
+            x=xs[len(xs)//2]
+            draw.polygon([(x-5,y+2),(x-5,y-1),(x-3,y-4),(x,y-5),
+                          (x+2,y-3),(x+1,y-1),(x-1,y-1),(x,y+1),
+                          (x+3,y+1),(x+3,y+3),(x-2,y+4)],fill=(25,79,87,255))
+            draw.line([(x-4,y+1),(x-4,y-1),(x-2,y-3),(x,y-3),
+                       (x-1,y-1),(x-2,y),(x,y+2),(x+2,y+2)],fill=(85,190,187,255),width=2)
+            draw.line([(x-3,y-2),(x-2,y-3),(x,y-3)],fill=(213,249,233,255))
     sprite=sprite.resize((128,128),Image.Resampling.NEAREST)
     assert {a for *_,a in sprite.getdata()}=={0,255}
     output=BytesIO()
