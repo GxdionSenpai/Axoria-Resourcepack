@@ -442,6 +442,34 @@ from PIL import ImageDraw
 # This is a recolor ONLY, per the owner's explicit request.
 def recolor_diamond(source,kind,output_size):
     image=Image.open(source).convert("RGBA")
+    if kind in ("s1_guardian","s1_elder_guardian"):
+        # Repeating block-style pixel mosaic, masked by original diamond UV.
+        # Dark prismarine has staggered rectangular tiles; normal prismarine
+        # has irregular mottled square fragments. Keep diamond facet shading.
+        dark=kind=="s1_elder_guardian"
+        palette=((24,53,45),(33,72,59),(43,92,75),(53,110,87)) if dark else (
+            (58,107,109),(75,129,132),(91,149,148),(120,172,165),(144,190,179))
+        lum=[0.2126*r+0.7152*g+0.0722*b for r,g,b,a in image.getdata() if a]
+        low,high=min(lum),max(lum)
+        for y in range(image.height):
+            for x in range(image.width):
+                r,g,b,a=image.getpixel((x,y))
+                if not a:continue
+                v=(0.2126*r+0.7152*g+0.0722*b-low)/max(1,high-low)
+                if dark:
+                    row=y//2
+                    xx=(x+(row%2)*2)%4
+                    idx=0 if y%2==1 or xx==3 else 1+((x//4+row*3+xx)%3)
+                else:
+                    # Compact irregular patches with a deterministic pixel pattern.
+                    pattern=((1,1,3,3,2,0,0,2),(1,3,4,2,2,0,1,1),
+                             (2,2,3,1,0,1,3,3),(3,2,1,1,0,2,4,3),
+                             (0,1,1,3,3,2,2,1),(0,0,2,4,3,1,0,1),
+                             (2,3,3,2,1,1,2,4),(2,4,2,0,0,3,3,2))
+                    idx=pattern[y%8][x%8]
+                shade=0.62+0.52*v
+                image.putpixel((x,y),tuple(min(255,round(c*shade)) for c in palette[idx])+(a,))
+        return image.resize(output_size,Image.Resampling.NEAREST)
     if kind=="beta":
         gradient=((54,20,5),(112,44,6),(190,85,15),
                   (241,139,28),(255,209,85))
