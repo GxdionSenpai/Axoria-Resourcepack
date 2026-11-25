@@ -423,6 +423,42 @@ def haendlervertrag_sprite():
         d.line([(x+3,y-2),(x+2,y+1),(x+4,y+1),(x+3,y-2)],fill=(255,218,109,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def raketenwerfer_sprite(stage=3):
+    # Bow-inspired diagonal firing direction, redesigned as a compact
+    # mechanical launcher. The projectile is a red firework, never an arrow.
+    im=Image.new("RGBA",(64,64),(0,0,0,0))
+    d=ImageDraw.Draw(im)
+    ink=(36,20,49,255); gold=(195,121,39,255); shine=(255,211,111,255)
+    purple=(91,43,137,255); light=(151,83,207,255)
+    # Draw horizontally then rotate the complete pixel sprite together.
+    d.polygon([(9,19),(46,19),(52,23),(52,38),(46,42),(33,42),
+               (31,53),(20,53),(18,42),(9,42),(5,37),(5,24)],fill=ink)
+    d.rectangle((10,22,46,38),fill=purple)
+    d.rectangle((10,23,46,26),fill=light)
+    d.rectangle((11,35,46,38),fill=(56,27,94,255))
+    d.polygon([(21,41),(30,41),(28,50),(22,50)],fill=(65,37,100,255))
+    d.line((22,43,23,49),fill=light,width=2)
+    for x in (10,21,43):
+        d.rectangle((x,20,x+3,40),fill=gold)
+        d.line((x,21,x,39),fill=shine)
+    d.rectangle((5,24,11,37),fill=(67,40,67,255))
+    d.rectangle((5,27,9,34),fill=(19,12,29,255))
+    d.rectangle((25,27,40,33),fill=(46,22,77,255))
+    d.line((26,28,38,28),fill=(211,124,247,255))
+    for x in (27,31,35,39):
+        d.rectangle((x,30,x+1,32),fill=(113,222,246,255) if stage>=2 else (84,52,123,255))
+    # Firework slides from inside the muzzle to its ready position.
+    if stage:
+        tip={1:5,2:3,3:1}[stage]
+        d.polygon([(tip,30),(tip+6,24),(tip+9,24),(tip+9,36),(tip+6,36)],fill=(104,20,35,255))
+        d.polygon([(tip+1,30),(tip+6,26),(tip+7,26),(tip+7,34),(tip+6,34)],fill=(231,56,52,255))
+        d.rectangle((tip+9,26,tip+14,34),fill=(181,40,47,255))
+        d.line((tip+10,26,tip+10,34),fill=(255,225,190,255),width=2)
+        d.line((tip+5,27,tip+7,27),fill=(255,148,115,255))
+    # Up-left muzzle, matching the direction of the previous launcher.
+    im=im.rotate(-28,resample=Image.Resampling.NEAREST,expand=False)
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -438,12 +474,15 @@ def render_items(files):
         # the forge core glows orange; deliberately NOT a uniform purple set.
         custom={"trichterherz":trichterherz_sprite,"dimensionsklinge":dimensionsklinge_sprite,
                 "titanfaust":titanfaust_sprite,"gravitationsbrecher":gravitationsbrecher_sprite,
-                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite,"krabbenschere":krabbenschere_sprite,"haendlervertrag":haendlervertrag_sprite}
+                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite,"krabbenschere":krabbenschere_sprite,"haendlervertrag":haendlervertrag_sprite,"raketenwerfer":raketenwerfer_sprite}
         if name in custom:
             texture=custom[name]()
         if name in ("dimensionsklinge","titanfaust","gravitationsbrecher","abyss_dreizack"):
             texture=refine_weapon(texture,name)
         _put(files,name,texture)
+
+    for stage in range(3):
+        _put(files,"raketenwerfer_reload_"+str(stage),raketenwerfer_sprite(stage))
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
