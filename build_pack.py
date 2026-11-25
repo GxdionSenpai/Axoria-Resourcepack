@@ -886,43 +886,100 @@ assert all(any(p.get("id")==id for p in font_check["providers"])
            for id in ("minecraft:include/space","minecraft:include/default",
                       "minecraft:include/unifont"))
 
-# Exclusive Axoria treasure chest, with its own item-model key.
-# No vanilla chest or ender chest assets are overridden.
+# Exclusive Axoria treasure chest: sculpted gold frame and axolotl mascot.
 from PIL import ImageDraw
 im=Image.new("RGBA",(64,64))
 d=ImageDraw.Draw(im)
-for y in range(64):
-    for x in range(64):
-        if y<16:
-            c=[(75,35,24),(96,46,29),(115,57,33),(130,68,39)][(x*7+y*11)%4]
-            if y%5==0:c=(53,25,20)
-        elif y<32:
-            c=[(132,76,19),(192,122,30),(240,178,53),(255,215,105)][(x+y*3)%4]
-        elif y<48:
-            c=[(39,13,48),(71,24,86),(111,38,123),(151,58,157)][(x+y)%4]
-        else:
-            c=[(109,32,94),(181,48,142),(240,93,183),(255,171,225)][(x+y)%4]
-        d.point((x,y),fill=(*c,255))
+# Sixteen 16x16 atlas tiles; deliberate broad pixel clusters instead of noise.
+palettes=[
+    ("#48251c","#693923","#895032","#a4673c"),
+    ("#805019","#bd812b","#e8b64c","#ffe09a"),
+    ("#492e3b","#674455","#876375","#ae8795"),
+    ("#491a76","#7930ad","#b95ae6","#f0a7ff"),
+    ("#ae4b89","#d976ad","#f4a8cf","#ffd4e8"),
+    ("#70285b","#ad407f","#de66ab","#f79dce"),
+    ("#24182e","#38243f","#593b5e","#80516e"),
+    ("#fff0d6","#fff0d6","#fff0d6","#fff0d6"),
+    ("#39201a","#512d23","#70402b","#885238"),
+    ("#86551b","#bc842e","#e3ab43","#f9d576"),
+    ("#31154c","#6a2695","#ab45d2","#e9a1ff"),
+    ("#c55c8b","#e488b5","#ffc4dc","#ffe2ed"),
+]
+for i,pal in enumerate(palettes):
+    ox,oy=(i%4)*16,(i//4)*16
+    d.rectangle((ox,oy,ox+15,oy+15),fill=pal[1])
+    d.rectangle((ox,oy,ox+15,oy+1),fill=pal[3])
+    d.rectangle((ox,oy+14,ox+15,oy+15),fill=pal[0])
+    d.rectangle((ox,oy+2,ox+1,oy+13),fill=pal[2])
+    d.rectangle((ox+14,oy+2,ox+15,oy+13),fill=pal[0])
+    if i in (0,8):
+        for y in (5,10):
+            d.line((ox,oy+y,ox+15,oy+y),fill=pal[0])
+            d.line((ox+2,oy+y+1,ox+10,oy+y+1),fill=pal[2])
+    elif i in (3,10):
+        d.polygon([(ox+2,oy+5),(ox+8,oy+2),(ox+13,oy+5),(ox+8,oy+9)],fill=pal[3])
+        d.polygon([(ox+2,oy+5),(ox+8,oy+9),(ox+8,oy+14),(ox+3,oy+10)],fill=pal[2])
+        d.polygon([(ox+13,oy+5),(ox+8,oy+9),(ox+8,oy+14),(ox+13,oy+10)],fill=pal[0])
 bio=BytesIO();im.save(bio,format="PNG")
 files["assets/axoria/textures/block/treasure_chest.png"]=bio.getvalue()
 elements=[]
-def treasure_box(lo,hi,band):
-    uv=[0,band*4,16,band*4+4]
-    elements.append({"from":lo,"to":hi,"faces":{face:{"uv":uv,"texture":"#chest"} for face in ("north","south","east","west","up","down")}})
-treasure_box([1,0,1],[15,9,15],0)
-treasure_box([1,9,1],[15,12,15],0)
-treasure_box([2,12,1],[14,13,15],0)
-treasure_box([4,13,1],[12,14,15],0)
-for x in (1,12):
-    treasure_box([x,0,0.8],[x+3,12,15.2],1)
-    treasure_box([x,12,1],[x+3,13,15],1)
-treasure_box([4,13,1],[5,14.2,15],1)
-treasure_box([11,13,1],[12,14.2,15],1)
-treasure_box([1,0,0.7],[15,1.5,15.3],1)
-treasure_box([1,8,0.6],[15,9,15.4],1)
-treasure_box([6,6,0],[10,11,1],1)
-treasure_box([7,7,-0.2],[9,9,0.2],2)
-treasure_box([7.5,8,-0.4],[8.5,9,-0.1],3)
+def treasure_box(lo,hi,tile,top=None,side=None):
+    def uv(i):
+        x,y=(i%4)*4,(i//4)*4
+        return [x,y,x+4,y+4]
+    elements.append({"from":lo,"to":hi,"faces":{f:{"uv":uv(top if f=="up" and top is not None else side if f in ("east","west") and side is not None else tile),"texture":"#chest"} for f in ("north","south","east","west","up","down")}})
+# Broad, low chest with a stepped lid and thick golden corner armour.
+treasure_box([1,1,2],[15,8,14],0,8,8)
+treasure_box([1,8.3,2],[15,11.5,14],0,0,8)
+treasure_box([2,11.5,2],[14,13,14],0)
+treasure_box([3,13,2],[13,14,14],0)
+treasure_box([0.5,0,1.5],[15.5,1.5,14.5],1)
+treasure_box([0.5,7.2,1.5],[15.5,8,14.5],9)
+for x in (0.5,12.5):
+    treasure_box([x,1.5,1.3],[x+3,7.2,14.7],1,9)
+    treasure_box([x,8.3,1.3],[x+3,11.5,14.7],1)
+for x in (1.5,12):
+    treasure_box([x,11.5,1.8],[x+2.5,13,14.2],1)
+for x in (3,11):
+    treasure_box([x,13,2],[x+2,14.3,14],9)
+# Four inset purple crystal mounts, raised facets and gold rims.
+for x in (2.3,10.7):
+    treasure_box([x,11.6,1],[x+3,14,3.8],1)
+    treasure_box([x+.4,12,0.6],[x+2.6,13.8,1.2],3)
+    treasure_box([x+.4,14,1.4],[x+2.6,14.7,3.4],10)
+    treasure_box([x,2,0.9],[x+3,5,2],1)
+    treasure_box([x+.4,2.4,0.3],[x+2.6,4.6,1],3)
+# Golden escutcheon behind the pink axolotl face.
+treasure_box([4.3,4.3,0.6],[11.7,11.3,2],1)
+treasure_box([5,3.7,0.6],[11,4.5,2],9)
+# Three stepped gills per side, deliberately chunky Minecraft geometry.
+for x,sign in ((5,-1),(11,1)):
+    for y,length in ((10,2),(8.5,2.6),(7,1.8)):
+        lo=x-length if sign<0 else x
+        hi=x if sign<0 else x+length
+        treasure_box([lo,y,0.1],[hi,y+1.1,1.4],5,4)
+        tip=lo if sign<0 else hi-.6
+        treasure_box([tip,y+.6,-.1],[tip+.6,y+1.3,1.2],4)
+treasure_box([5,5.7,-.25],[11,10.8,1.3],4,11)
+treasure_box([5.6,5.2,-.3],[10.4,6.1,1.3],4)
+# Dark eyes with tiny ivory reflections, smiling mouth and pink cheeks.
+for x in (6,9):
+    treasure_box([x,8.2,-.55],[x+1,9.4,-.24],6)
+    treasure_box([x+.15,8.85,-.65],[x+.5,9.2,-.54],7)
+for x in (5.5,10):
+    treasure_box([x,7.2,-.48],[x+.5,7.8,-.24],5)
+treasure_box([7,6.8,-.55],[9,7.15,-.24],6)
+treasure_box([6.7,7.1,-.55],[7,7.5,-.24],6)
+treasure_box([9,7.1,-.55],[9.3,7.5,-.24],6)
+# Small lock below the mascot, not a skull.
+treasure_box([7,3.1,-.1],[9,5.1,.7],1)
+treasure_box([7.7,3.7,-.25],[8.3,4.5,-.1],6)
+# Decorative chain links on the lower front, kept within the hitbox.
+for x,y in ((3,5.7),(4.3,5.1),(5.6,4.5),(9.4,4.5),(10.7,5.1),(12,5.7)):
+    treasure_box([x,y,0.1],[x+1.3,y+.45,.75],9)
+    treasure_box([x,y+.9,0.1],[x+1.3,y+1.35,.75],1)
+    treasure_box([x,y+.4,0.1],[x+.35,y+1,.75],1)
+    treasure_box([x+.95,y+.4,0.1],[x+1.3,y+1,.75],9)
 files["assets/axoria/models/item/treasure_chest.json"]=json.dumps({"textures":{"chest":"axoria:block/treasure_chest","particle":"axoria:block/treasure_chest"},"elements":elements}).encode()
 files["assets/axoria/items/treasure_chest.json"]=json.dumps({"model":{"type":"minecraft:model","model":"axoria:item/treasure_chest"}}).encode()
 
