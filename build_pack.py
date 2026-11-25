@@ -155,6 +155,7 @@ render_items(files)
 items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_NAMES)))
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
+items.extend(("carrot_on_a_stick","raketenwerfer_reload_"+str(i),1211+i) for i in range(3))
 
 # Original vanilla 1.21.4 sprites with small opaque Guardian ornaments.
 # Embed the small source PNGs so builds are deterministic and offline.
@@ -469,7 +470,7 @@ for path, data in list(files.items()):
         # between Sternenbogen's bow limbs and string, the crab claw opening
         # and the rocket's actual muzzle. The old generic "fill enclosed holes"
         # pass destroyed these important original art details.
-        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack","sternenbogen")):
+        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack","sternenbogen","raketenwerfer_reload_")):
             image=Image.open(BytesIO(data)).convert("RGBA")
             if image.size!=(128,128) or {a for *_,a in image.getdata()}!={0,255}:
                 raise ValueError("Custom Axoria 128px item texture invalid: "+path)
