@@ -518,7 +518,7 @@ def clean_legacy_black_specks(data):
     return out.getvalue()
 
 for name in ("gluecks_spitzhacke","gaertnerschere","enterhaken","flammenstab",
-             "blitzstab","phoenix_feder","monster_lupe"):
+             "blitzstab","phoenix_feder","monster_lupe","frostkugel"):
     path="assets/axoria/textures/item/"+name+".png"
     if path in files:
         files[path]=clean_legacy_black_specks(files[path])
