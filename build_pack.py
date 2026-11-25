@@ -980,6 +980,24 @@ for x,y in ((3,5.7),(4.3,5.1),(5.6,4.5),(9.4,4.5),(10.7,5.1),(12,5.7)):
     treasure_box([x,y+.9,0.1],[x+1.3,y+1.35,.75],1)
     treasure_box([x,y+.4,0.1],[x+.35,y+1,.75],1)
     treasure_box([x+.95,y+.4,0.1],[x+1.3,y+1,.75],9)
+# Prevent z-fighting on overlapping coplanar decorative surfaces.
+# Move only the later face outward by a tiny amount; keep all UVs and the silhouette.
+def separate_treasure_faces(boxes):
+    for index,box in enumerate(boxes):
+        for axis in range(3):
+            for bound,opposite,direction in (("from","to",-1),("to","from",1)):
+                original=box[bound][axis]
+                other_axes=[a for a in range(3) if a!=axis]
+                # Coplanar touching faces of opposite orientation are internal;
+                # only same-facing overlapping surfaces compete for depth.
+                while any(abs(previous[bound][axis]-box[bound][axis])<0.002
+                          and all(min(previous["to"][a],box["to"][a]) >
+                                  max(previous["from"][a],box["from"][a])+0.0001 for a in other_axes)
+                          for previous in boxes[:index]):
+                    box[bound][axis]=round(box[bound][axis]+direction*0.025,4)
+                assert abs(box[bound][axis]-original)<0.25, "Excessive treasure face offset"
+    return boxes
+elements=separate_treasure_faces(elements)
 files["assets/axoria/models/item/treasure_chest.json"]=json.dumps({"textures":{"chest":"axoria:block/treasure_chest","particle":"axoria:block/treasure_chest"},"elements":elements}).encode()
 files["assets/axoria/items/treasure_chest.json"]=json.dumps({"model":{"type":"minecraft:model","model":"axoria:item/treasure_chest"}}).encode()
 
