@@ -297,50 +297,39 @@ def refine_weapon(image,name):
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def schmiedekern_sprite():
-    # Original netherite upgrade template from vanilla Minecraft.
-    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAG1BMVEUAAABg6OhLyckgmriFQkJyMjJlKChRFRU0Dg6rizFlAAAAAXRSTlMAQObYZgAAAFhJREFUeNoFwYcNAgEMADFfQIj9p0Xfgg0AIPgAHITPLmjnMLCkNAym8goYoLkiDKjrOacwUNfD2WJg78rci4FNEgwkacNAVApvyBYg+K5V/Ah84QcAAPwB3LEZKARl0FcAAAAASUVORK5CYII=")
-    base=Image.open(BytesIO(raw)).convert("RGBA")
-    im=base.resize((64,64),Image.Resampling.NEAREST)
-    original=im.copy()
+    # Render the authentic heavy-core block texture as an isometric item.
+    # Dark stone frame, molten recessed panels, three shaded cube faces.
+    source=Image.open(BytesIO(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAG1BMVEWSmasAAAB8gpNeZW9OUlk9P0MxNDYpKSkgICCRr+EvAAAAAnRSTlP/AOW3MEoAAABhSURBVHjaBcGBcQIwDAAxvZPuv285YqSYZ7w/ssnN8s7L6lx9mJOSjDVT2zoHM6iCRe7GfGdD3WnaSKBj27ggYd68WUDm2L49wODcLYARHgAz2AfAsBDArf1/AnCrnQzAD9+vIWU6bW9HAAAAAElFTkSuQmCC"))).convert("RGBA")
+    face=source.crop((0,0,8,8))
+    # Select the occupied texture region rather than assuming its UV origin.
+    box=source.getbbox()
+    face=source.crop(box).resize((16,16),Image.Resampling.NEAREST)
+    im=Image.new("RGBA",(128,128),(0,0,0,0))
     d=ImageDraw.Draw(im)
-    for y in range(64):
-        for x in range(64):
-            r,g,b,a=original.getpixel((x,y))
-            if not a:continue
-            if g>r*1.3 and b>r*1.3:
-                # Molten orange in the existing upgrade emblem.
-                v=g/255
-                c=(round(165+90*v),round(35+155*v),round(8+46*v))
-            else:
-                # Angular basalt shading and subtle stone grain.
-                v=(r+g+b)/3
-                grain=((x//3*17+y//3*11)%13)-6
-                k=max(20,min(155,round(v*1.05+grain)))
-                c=(k,max(15,k-4),max(15,k-2))
-            d.point((x,y),fill=c+(255,))
-    # Lava travels through cracks on the face and spills from the lower edge.
-    for points in (
-        [(32,23),(29,28),(31,34),(26,39),(26,46)],
-        [(39,29),(42,33),(38,39),(40,46)],
-        [(25,34),(20,36),(20,42)]):
-        for width,color in ((4,(77,22,19,255)),(2,(239,73,12,255)),(1,(255,198,57,255))):
-            overlay=Image.new("RGBA",(64,64),(0,0,0,0))
-            ImageDraw.Draw(overlay).line(points,fill=color,width=width)
-            for yy in range(64):
-                for xx in range(64):
-                    c=overlay.getpixel((xx,yy))
-                    if c[3] and original.getpixel((xx,yy))[3]:im.putpixel((xx,yy),c)
-    # Two connected drips extending below the stone plate, with dark crust.
-    for x,length in ((27,7),(37,4)):
-        ys=[y for y in range(64) if original.getpixel((x,y))[3]]
-        if not ys:continue
-        y=max(ys)
-        end=min(62,y+length)
-        if end<=y:continue
-        d.line((x,y-2,x,end),fill=(116,30,12,255),width=4)
-        d.line((x,y-2,x,end-1),fill=(245,88,13,255),width=2)
-        d.line((x,y-1,x,end-2),fill=(255,211,66,255))
-    return im.resize((128,128),Image.Resampling.NEAREST)
+    def color(u,v,side):
+        r,g,b,a=face.getpixel((u,v))
+        edge=min(u,v,15-u,15-v)
+        if edge>=5:
+            # Hot interior with a golden center and darker molten crust.
+            heat=max(0,1-(abs(u-7.5)+abs(v-7.5))/7)
+            c=(int(185+70*heat),int(46+178*heat),int(9+64*heat))
+        else:
+            k=max(24,min(155,int((r+g+b)/3)))
+            if edge==3:k=max(24,k-18)
+            c=(k+8,k,k-3)
+        shade=(1.0,0.83,0.67)[side]
+        return tuple(round(q*shade) for q in c)+(255,)
+    # Isometric cube, aligned pixel cells, no antialiasing.
+    for side in (0,1,2):
+        def project(u,v):
+            if side==0:return (64+3*(u-v),12+1.5*(u+v))
+            if side==1:return (16+3*u,36+1.5*u+3.5*v)
+            return (64+3*u,60-1.5*u+3.5*v)
+        for v in range(16):
+            for u in range(16):
+                pts=[tuple(round(q) for q in project(x,y)) for x,y in ((u,v),(u+1,v),(u+1,v+1),(u,v+1))]
+                d.polygon(pts,fill=color(u,v,side))
+    return im
 
 def krabbenschere_sprite():
     # Vanilla shears remain the underlying item. Rework their two jaws into
