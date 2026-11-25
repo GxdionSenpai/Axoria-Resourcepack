@@ -285,17 +285,20 @@ def guardian_weapon_sprite(source,elder=False):
     from PIL import ImageDraw
     draw=ImageDraw.Draw(sprite)
     if source=="trident":
-        # Eye mounted on the shaft just below the prongs.
-        y=13
+        # Center the Elder Guardian eye on the diagonal shaft, below
+        # the fork, rather than on the outer prongs.
+        y=17
         xs=[x for x in range(32) if opaque(x,y)]
         if xs:
-            x=xs[len(xs)//2]
-            draw.polygon([(x-4,y),(x-2,y-3),(x+2,y-3),(x+4,y),
-                          (x+2,y+3),(x-2,y+3)],fill=(22,48,40,255))
-            draw.rectangle((x-2,y-1,x+2,y+1),fill=(219,205,164,255))
-            draw.rectangle((x-1,y-1,x+1,y+1),fill=(150,77,50,255))
-            draw.line((x,y-1,x,y+1),fill=(42,30,26,255))
-            draw.point((x-1,y-1),fill=(255,239,196,255))
+            x=(min(xs)+max(xs))//2
+            draw.polygon([(x-5,y),(x-3,y-3),(x+3,y-3),(x+5,y),
+                          (x+3,y+3),(x-3,y+3)],fill=(61,58,48,255))
+            draw.polygon([(x-4,y),(x-2,y-2),(x+2,y-2),(x+4,y),
+                          (x+2,y+2),(x-2,y+2)],fill=(186,183,150,255))
+            draw.line((x-2,y-2,x+2,y-2),fill=(229,222,184,255))
+            draw.rectangle((x-1,y-1,x+1,y+1),fill=(154,95,63,255))
+            draw.line((x,y-1,x,y+1),fill=(67,38,34,255))
+            draw.point((x-1,y-1),fill=(245,230,196,255))
     elif source=="diamond_sword":
         # A curling crest of sea foam at the blade/guard transition.
         y=17
