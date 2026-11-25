@@ -40,7 +40,7 @@ def trichterherz_sprite():
     # Original vanilla hopper item silhouette (Minecraft 1.21.4).
     raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUAAABiYWJSVVJKTEpBREE+Pj44ODgwMDAGhTNBAAAAAXRSTlMAQObYZgAAAFxJREFUeNpjwAaMgYABCILTgMCEgYFVLb28vCypgIE1SL283Ek1gIEh1FFQUKWUgYGB1TQ0NKQArFrJxJ0BBIIEhSEMVkHlAghDUQTCYAg0Z4CAIHcGCGAtQLYaAO5rD2YxW90wAAAAAElFTkSuQmCC")
     base=Image.open(BytesIO(raw)).convert("RGBA")
-    palette=((65,16,49),(115,26,77),(181,46,116),(236,91,165),(255,166,215))
+    palette=((140,44,111),(200,98,158),(230,140,193),(251,193,227),(255,222,240))
     colors=[]
     for r,g,b,a in base.getdata():
         if not a:
@@ -53,13 +53,18 @@ def trichterherz_sprite():
     # the original hopper. Work on a crisp 32-pixel grid.
     im=Image.new("RGBA",(32,32),(0,0,0,0))
     d=ImageDraw.Draw(im)
+    # Match the vanilla axolotl egg: three short, thick, stepped gills
+    # per side, with dark magenta roots and broad pink lobes.
     for side in (-1,1):
-        for y,dy in ((9,-4),(13,-1),(17,2)):
-            x=7 if side==-1 else 24
-            tip=x+side*5
-            d.line((x,y,tip,y+dy),fill=(83,19,58,255),width=3)
-            d.line((x,y,tip,y+dy),fill=(243,88,157,255),width=1)
-            d.point((tip,y+dy-1),fill=(255,171,209,255))
+        def mirror(points):
+            return [(x if side==-1 else 31-x,y) for x,y in points]
+        for y,offset in ((7,2),(11,0),(15,0)):
+            d.polygon(mirror([(8,y+2),(5,y+2),(5,y+1),(2+offset,y+1),
+                              (2+offset,y-1),(3+offset,y-2),(6,y-2),
+                              (6,y-1),(8,y-1)]),fill=(140,44,111,255))
+            d.polygon(mirror([(3+offset,y-1),(5,y-1),(5,y),(7,y),
+                              (7,y+1),(3+offset,y+1)]),fill=(177,66,131,255))
+            d.line(mirror([(3+offset,y-1),(5,y-1)]),fill=(230,140,193,255))
     im.alpha_composite(base.resize((24,24),Image.Resampling.NEAREST),(4,4))
     d=ImageDraw.Draw(im)
     # Centered pixel heart on the front of the hopper.
@@ -67,8 +72,8 @@ def trichterherz_sprite():
     for yy,row in enumerate(heart):
         for xx,c in enumerate(row):
             if c=="#":
-                d.point((12+xx,12+yy),fill=(255,211,235,255) if yy==0 else (255,54,128,255))
-    d.point((13,13),fill=(255,245,249,255))
+                d.point((12+xx,12+yy),fill=(255,91,91,255) if yy==0 else (218,24,43,255) if yy<4 else (169,13,34,255))
+    d.point((13,13),fill=(255,185,179,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def dimensionsklinge_sprite():
