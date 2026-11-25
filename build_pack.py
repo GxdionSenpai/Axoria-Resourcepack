@@ -529,7 +529,7 @@ for path, data in list(files.items()):
         # between Sternenbogen's bow limbs and string, the crab claw opening
         # and the rocket's actual muzzle. The old generic "fill enclosed holes"
         # pass destroyed these important original art details.
-        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack","sternenbogen","raketenwerfer_reload_")):
+        if Path(path).stem in set(NEW_NAMES)|{"sternenbogen_charged","skyblock_menu_book"} or Path(path).stem.startswith(("s1_gezeitenklinge","s1_tiefenjaegerbogen","s1_elderdreizack","sternenbogen","raketenwerfer_reload_","donnerarmbrust","seelenspeer")):
             image=Image.open(BytesIO(data)).convert("RGBA")
             if image.size!=(128,128) or {a for *_,a in image.getdata()}!={0,255}:
                 raise ValueError("Custom Axoria 128px item texture invalid: "+path)
