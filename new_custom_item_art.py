@@ -413,39 +413,31 @@ def haendlervertrag_sprite():
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def raketenwerfer_sprite(stage=3):
-    # Bow-inspired diagonal firing direction, redesigned as a compact
-    # mechanical launcher. The projectile is a red firework, never an arrow.
+    # Slim olive-green pixel-art fantasy firework launcher, matching the
+    # reference diagonal. Keep the existing four model states.
     im=Image.new("RGBA",(64,64),(0,0,0,0))
     d=ImageDraw.Draw(im)
-    ink=(36,20,49,255); gold=(195,121,39,255); shine=(255,211,111,255)
-    purple=(91,43,137,255); light=(151,83,207,255)
-    # Draw horizontally then rotate the complete pixel sprite together.
-    d.polygon([(9,19),(46,19),(52,23),(52,38),(46,42),(33,42),
-               (31,53),(20,53),(18,42),(9,42),(5,37),(5,24)],fill=ink)
-    d.rectangle((10,22,46,38),fill=purple)
-    d.rectangle((10,23,46,26),fill=light)
-    d.rectangle((11,35,46,38),fill=(56,27,94,255))
-    d.polygon([(21,41),(30,41),(28,50),(22,50)],fill=(65,37,100,255))
-    d.line((22,43,23,49),fill=light,width=2)
-    for x in (10,21,43):
-        d.rectangle((x,20,x+3,40),fill=gold)
-        d.line((x,21,x,39),fill=shine)
-    d.rectangle((5,24,11,37),fill=(67,40,67,255))
-    d.rectangle((5,27,9,34),fill=(19,12,29,255))
-    d.rectangle((25,27,40,33),fill=(46,22,77,255))
-    d.line((26,28,38,28),fill=(211,124,247,255))
-    for x in (27,31,35,39):
-        d.rectangle((x,30,x+1,32),fill=(113,222,246,255) if stage>=2 else (84,52,123,255))
-    # Firework slides from inside the muzzle to its ready position.
+    dark=(28,33,28,255)
+    d.line((14,14,53,53),fill=dark,width=12)
+    d.line((14,14,53,53),fill=(66,85,35,255),width=8)
+    d.line((12,16,51,55),fill=(47,61,29,255),width=3)
+    d.line((16,12,55,51),fill=(108,132,57,255),width=2)
+    for x,y in ((14,14),(52,52)):
+        d.line((x-5,y+5,x+5,y-5),fill=dark,width=5)
+        d.line((x-4,y+4,x+4,y-4),fill=(67,69,64,255),width=2)
+    d.line((32,32,24,40),fill=dark,width=5)
+    d.line((24,40,21,43),fill=(61,65,59,255),width=3)
+    d.rectangle((27,21,30,24),fill=dark)
+    # In the empty state the front is dark; loaded states visibly expose
+    # the red-and-white Minecraft firework at the upper-left end.
+    d.line((10,10,15,15),fill=(15,19,16,255),width=3)
     if stage:
-        tip={1:5,2:3,3:1}[stage]
-        d.polygon([(tip,30),(tip+6,24),(tip+9,24),(tip+9,36),(tip+6,36)],fill=(104,20,35,255))
-        d.polygon([(tip+1,30),(tip+6,26),(tip+7,26),(tip+7,34),(tip+6,34)],fill=(231,56,52,255))
-        d.rectangle((tip+9,26,tip+14,34),fill=(181,40,47,255))
-        d.line((tip+10,26,tip+10,34),fill=(255,225,190,255),width=2)
-        d.line((tip+5,27,tip+7,27),fill=(255,148,115,255))
-    # Up-left muzzle, matching the direction of the previous launcher.
-    im=im.rotate(-28,resample=Image.Resampling.NEAREST,expand=False)
+        x,y={1:(10,10),2:(7,7),3:(4,4)}[stage]
+        d.polygon([(x,y),(x+8,y+2),(x+2,y+8)],fill=(111,27,31,255))
+        d.polygon([(x+1,y+1),(x+6,y+3),(x+3,y+6)],fill=(238,70,62,255))
+        d.line((x+5,y+5,13,13),fill=(239,224,198,255),width=5)
+        d.line((x+6,y+6,x+8,y+8),fill=(188,42,43,255),width=3)
+        d.point((x+2,y+2),fill=(255,167,132,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def render_items(files):
