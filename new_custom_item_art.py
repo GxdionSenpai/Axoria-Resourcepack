@@ -110,6 +110,39 @@ def dimensionsklinge_sprite():
         draw.point((x,y-1),fill=(236,225,255,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def titanfaust_sprite():
+    # Vanilla iron horse armor provides the metal palette and shading.
+    # No vanilla gauntlet exists; build a compact, custom closed fist.
+    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAJ1BMVEUAAADZ2dm9vb2qqqqDg4NpaWk/Pz8cHBxFBQUXFxc6BAQyBAQMDAysHaQzAAAAAXRSTlMAQObYZgAAAE tJREFUeNpjIASY4QxTKMOIOQAioGQEZZimJTAwOFqUN4cBeSwiEdOXpYGEXbMq25wdgCJhWTO3hQDVsoZGn9kWChRhSwOBBCzWAQAjXxBdqDMTTgAAAABJRU5ErkJggg==".replace(" ",""))
+    metal=Image.open(BytesIO(raw)).convert("RGBA")
+    shades=sorted({p[0] for p in metal.getdata() if p[3] and p[0]==p[1]==p[2]})
+    def steel(i):
+        v=shades[round((len(shades)-1)*i/4)]
+        return (max(0,v-20),max(0,v-12),min(255,v+16),255)
+    im=Image.new("RGBA",(32,32),(0,0,0,0))
+    d=ImageDraw.Draw(im)
+    ink=(24,19,36,255); gold=(201,133,37,255); bright=(255,215,105,255)
+    blue=(24,62,137,255); light=(55,126,217,255)
+    d.polygon([(3,23),(11,15),(12,9),(16,5),(20,3),(26,5),(30,10),(29,16),
+               (24,21),(18,22),(11,30),(6,29)],fill=ink)
+    d.polygon([(5,23),(13,15),(19,20),(10,28),(7,27)],fill=blue)
+    d.line([(6,23),(12,17),(16,20),(9,26)],fill=light,width=2)
+    d.polygon([(12,15),(13,10),(17,6),(23,5),(28,10),(27,15),(22,20),(18,20)],fill=steel(2))
+    for x,y in ((18,7),(22,6),(26,8),(28,12)):
+        d.polygon([(x-2,y),(x,y-2),(x+2,y),(x+1,y+4),(x-2,y+3)],fill=ink)
+        d.polygon([(x-1,y),(x,y-1),(x+1,y),(x,y+3),(x-1,y+2)],fill=steel(4))
+    d.polygon([(13,11),(17,10),(19,13),(17,17),(13,16),(11,14)],fill=ink)
+    d.polygon([(13,12),(16,11),(17,13),(15,15),(13,14)],fill=steel(3))
+    # Gold reinforcement bands and a compact blue energy core.
+    d.line([(5,23),(9,27),(12,25)],fill=gold,width=2)
+    d.line([(11,17),(16,22),(19,19)],fill=gold,width=2)
+    d.line([(6,23),(9,26)],fill=bright)
+    d.polygon([(14,16),(18,13),(22,16),(18,20)],fill=ink)
+    d.polygon([(15,16),(18,14),(21,16),(18,19)],fill=gold)
+    d.polygon([(16,16),(18,15),(20,16),(18,18)],fill=(53,205,255,255))
+    d.point((18,15),fill=(220,252,255,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -123,7 +156,7 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else texture)
+        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
