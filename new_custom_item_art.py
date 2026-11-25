@@ -383,6 +383,46 @@ def krabbenschere_sprite():
     # presentation-only white sticker border and brown background.
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def haendlervertrag_sprite():
+    # Original vanilla book silhouette; paper remains warm ivory.
+    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAIVBMVEUAAADW1ta3t7eZmZlbW1tlSxdUPhNSLhBEJQoxIQQWEAXuGgy6AAAAAXRSTlMAQObYZgAAAFhJREFUeNpjQAEzJ0Dp0kwoHRo6AUK3hkYC6bLQ0IjQsAkM01MjQoFCnRCZ0A4HhpnqoUDayIBhuVAZkFaewcBVqA6iVzEAhSA0UEi5A0QDhSA0UGgVigsAYf4glv1MND8AAAAASUVORK5CYII=")
+    base=Image.open(BytesIO(raw)).convert("RGBA")
+    pixels=[]
+    for r,g,b,a in base.getdata():
+        if not a:
+            pixels.append((0,0,0,0));continue
+        if r==g==b:
+            c=(min(255,r+18),min(255,g+10),max(0,b-14))
+        else:
+            v=r/255
+            c=(round(38+185*v),round(13+65*v),round(65+190*v))
+        pixels.append(c+(255,))
+    base.putdata(pixels)
+    im=base.resize((64,64),Image.Resampling.NEAREST)
+    orig=im.copy()
+    d=ImageDraw.Draw(im)
+    # Gold corner trim on the leather cover, not on the pages.
+    for y in range(64):
+        for x in range(64):
+            r,g,b,a=orig.getpixel((x,y))
+            if a and b>r and b>g+20 and (x+y)%12 in (0,1) and (x<22 or x>43):
+                d.point((x,y),fill=(190,123,35,255))
+    # Place a compact gold trade seal on an opaque purple cover region.
+    candidates=[(x,y) for y in range(16,48) for x in range(16,48)
+                if all(orig.getpixel((xx,yy))[3] and orig.getpixel((xx,yy))[2]>orig.getpixel((xx,yy))[0]
+                       for xx,yy in ((x,y),(x-5,y),(x+5,y),(x,y-5),(x,y+5)))]
+    if candidates:
+        x,y=min(candidates,key=lambda p:(p[0]-32)**2+(p[1]-32)**2)
+        d.ellipse((x-6,y-6,x+6,y+6),fill=(77,35,25,255))
+        d.ellipse((x-5,y-5,x+5,y+5),fill=(222,157,49,255))
+        d.ellipse((x-4,y-4,x+4,y+4),fill=(107,44,125,255))
+        d.line((x-3,y-2,x+3,y-2),fill=(255,218,109,255))
+        d.line((x,y-3,x,y+3),fill=(255,218,109,255))
+        d.line((x-2,y+3,x+2,y+3),fill=(255,218,109,255))
+        d.line([(x-3,y-2),(x-4,y+1),(x-2,y+1),(x-3,y-2)],fill=(255,218,109,255))
+        d.line([(x+3,y-2),(x+2,y+1),(x+4,y+1),(x+3,y-2)],fill=(255,218,109,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -398,7 +438,7 @@ def render_items(files):
         # the forge core glows orange; deliberately NOT a uniform purple set.
         custom={"trichterherz":trichterherz_sprite,"dimensionsklinge":dimensionsklinge_sprite,
                 "titanfaust":titanfaust_sprite,"gravitationsbrecher":gravitationsbrecher_sprite,
-                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite,"krabbenschere":krabbenschere_sprite}
+                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite,"krabbenschere":krabbenschere_sprite,"haendlervertrag":haendlervertrag_sprite}
         if name in custom:
             texture=custom[name]()
         if name in ("dimensionsklinge","titanfaust","gravitationsbrecher","abyss_dreizack"):
