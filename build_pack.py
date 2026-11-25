@@ -168,7 +168,7 @@ for source_name,encoded in weapon_sources.items():
         if not a:return (0,0,0,0)
         light=(.2126*r+.7152*g+.0722*b)/255
         if spear:
-            palette=((30,13,55),(89,35,139),(170,86,224),(245,210,255)) if g>r*1.15 or b>r*1.15 else ((25,17,39),(64,39,88),(139,86,171),(213,170,240))
+            palette=((30,13,55),(89,35,139),(170,86,224),(245,210,255)) if g>r*1.15 or b>r*1.15 else ((9,7,15),(24,19,35),(49,39,66),(79,65,99))
         else:
             palette=((43,22,19),(128,65,21),(231,153,38),(255,235,157)) if r>g*1.15 and r>b*1.2 else ((29,15,53),(82,43,132),(154,96,215),(239,207,255))
             if source_name=="crossbow_firework" and r>g*1.7: return (r,g,b,255)
@@ -176,18 +176,10 @@ for source_name,encoded in weapon_sources.items():
         return tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,)
     original.putdata([recolour(px) for px in original.getdata()])
     im=original.resize((128,128),Image.Resampling.NEAREST)
-    # Faceted highlights and inlaid runes only on solid weapon pixels.
-    mask=im.getchannel("A")
-    d=ImageDraw.Draw(im)
-    accent=(242,195,255,255) if spear else (255,224,105,255)
-    for y in range(4,124,8):
-        for x in range(4,124,8):
-            if all(mask.getpixel((xx,yy))==255 for xx,yy in ((x-2,y-2),(x+2,y-2),(x-2,y+2),(x+2,y+2))) and (x//8+y//8)%5==1:
-                d.line((x-2,y+1,x+1,y-2),fill=accent,width=2)
     weapon_png=BytesIO();im.save(weapon_png,format="PNG")
     files["assets/axoria/textures/item/"+name+".png"]=weapon_png.getvalue()
     files["assets/axoria/models/item/"+name+".json"]=json.dumps({
-        "parent":"minecraft:item/handheld" if spear else "minecraft:item/crossbow_"+("standby" if source_name=="crossbow_standby" else source_name.removeprefix("crossbow_")),
+        "parent":"minecraft:item/handheld" if spear else "minecraft:item/crossbow",
         "textures":{"layer0":"axoria:item/"+name}
     },separators=(",",":")).encode()
 items.extend((("diamond_spear","seelenspeer",1112),("crossbow","donnerarmbrust",1113)))
@@ -409,7 +401,7 @@ for base, models in grouped.items():
         def crossbow_state(prefix):
             def model(suffix):
                 return {"type":"minecraft:model","model":prefix+suffix}
-            standby=model("_standby" if prefix=="minecraft:item/crossbow" else "")
+            standby=model("")
             return {"type":"minecraft:condition","property":"minecraft:using_item",
                 "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:crossbow/pull",
                     "fallback":model("_pulling_0"),"entries":[
