@@ -232,6 +232,81 @@ def abyss_dreizack_sprite():
                 d.point((x,y),fill=(151,224,249,255) if y%2==0 else (46,108,176,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def refine_weapon(image,name):
+    # Fine, opaque 64px artwork on top of the established silhouettes.
+    im=image.resize((64,64),Image.Resampling.NEAREST)
+    old=im.copy()
+    d=ImageDraw.Draw(im)
+    px=old.load()
+    # Refine bevels within the silhouette without expanding its outline.
+    for y in range(1,63):
+        for x in range(1,63):
+            r,g,b,a=px[x,y]
+            if not a:continue
+            if not px[x-1,y][3] or not px[x,y-1][3]:
+                if max(r,g,b)>65:
+                    d.point((x,y),fill=(min(255,r+22),min(255,g+22),min(255,b+22),255))
+            elif not px[x+1,y][3] or not px[x,y+1][3]:
+                d.point((x,y),fill=(r*3//4,g*3//4,b*3//4,255))
+            elif (x+y)%7==0 and max(r,g,b)>70:
+                d.point((x,y),fill=(min(255,r+9),min(255,g+9),min(255,b+9),255))
+    def line(points,color,width=1):
+        # Clip detail to the original sprite, preserving transparent gaps.
+        overlay=Image.new("RGBA",(64,64))
+        ImageDraw.Draw(overlay).line(points,fill=color,width=width)
+        for yy in range(64):
+            for xx in range(64):
+                c=overlay.getpixel((xx,yy))
+                if c[3] and px[xx,yy][3]:im.putpixel((xx,yy),c)
+    if name=="dimensionsklinge":
+        # Faceted portal gem and two thin, broken violet/cyan blade veins.
+        for y in range(9,34):
+            xs=[x for x in range(24,62) if px[x,y][3]]
+            if len(xs)>5:
+                x=xs[len(xs)//2]
+                if y%7 not in (0,1):
+                    line([(x-1,y),(x,y)],(83,200,239,255))
+                    line([(x+2,y),(x+2,y)],(203,124,255,255))
+        for y in range(32,47):
+            for x in range(64):
+                r,g,b,a=px[x,y]
+                if a and g>125 and b>180:
+                    if (x+y)%4==0:d.point((x,y),fill=(218,249,255,255))
+                    elif (x-y)%5==0:d.point((x,y),fill=(56,103,201,255))
+    elif name=="titanfaust":
+        # Separate polished knuckle plates and gold rivets in the wrist.
+        for y in range(8,36):
+            for x in range(23,60):
+                r,g,b,a=px[x,y]
+                if a and abs(r-g)<40 and b>90 and r>65:
+                    if x%4==0:d.point((x,y),fill=(min(255,r+25),min(255,g+28),min(255,b+30),255))
+                    elif y%5==0:d.point((x,y),fill=(r*4//5,g*4//5,b*4//5,255))
+        for x,y in ((15,47),(20,42),(26,39),(30,43)):
+            if px[x,y][3]:
+                d.point((x,y),fill=(255,223,133,255))
+                if px[x+1,y+1][3]:d.point((x+1,y+1),fill=(114,66,30,255))
+    elif name=="gravitationsbrecher":
+        # Give the event horizon a fine luminous inner rim, not a flat ring.
+        for y in range(2,36):
+            for x in range(26,63):
+                r,g,b,a=px[x,y]
+                if a and r>120 and b>150 and b>g*1.25:
+                    if (x+y)%5==0:d.point((x,y),fill=(242,192,255,255))
+                    elif (x-y)%4==0:d.point((x,y),fill=(125,47,199,255))
+        line([(31,24),(37,27),(45,25),(52,20),(58,13)],(191,104,251,255))
+        line([(32,25),(37,28),(45,26),(52,21)],(76,33,137,255))
+    elif name=="abyss_dreizack":
+        # Thin foam crests and sapphire facets, leaving the fork gaps open.
+        for y in range(3,40):
+            for x in range(20,63):
+                r,g,b,a=px[x,y]
+                if a and b>145 and g>85:
+                    if (x+y)%6==0:d.point((x,y),fill=(173,241,255,255))
+                    elif (x-y)%5==0:d.point((x,y),fill=(37,112,194,255))
+        line([(24,28),(25,34),(30,38),(36,37),(42,32)],(131,229,255,255))
+        line([(26,29),(27,33),(31,35),(35,34)],(37,141,225,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -245,7 +320,14 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else gravitationsbrecher_sprite() if name=="gravitationsbrecher" else abyss_dreizack_sprite() if name=="abyss_dreizack" else texture)
+        custom={"trichterherz":trichterherz_sprite,"dimensionsklinge":dimensionsklinge_sprite,
+                "titanfaust":titanfaust_sprite,"gravitationsbrecher":gravitationsbrecher_sprite,
+                "abyss_dreizack":abyss_dreizack_sprite}
+        if name in custom:
+            texture=custom[name]()
+        if name in ("dimensionsklinge","titanfaust","gravitationsbrecher","abyss_dreizack"):
+            texture=refine_weapon(texture,name)
+        _put(files,name,texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
