@@ -143,6 +143,44 @@ def titanfaust_sprite():
     d.point((18,15),fill=(220,252,255,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def gravitationsbrecher_sprite():
+    # Authentic vanilla mace, preserving its heavy square head and grip.
+    base=Image.open(BytesIO(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAUVBMVEWHibWAhbB9grBsdqtic6peb6FXbJ1rU2Z+PixTSVt2OSdqMSJeLx9QJxoAAAC/zue1pcqZoa56gsR8hJFmbHpQY5BVXGlCR1IjQmkuMzseIil9yPOhAAAAD3RSTlMAAAAAAAAAAAAAAAAAAAAnp8O0AAAAgklEQVR42k3K2xKDIAyE4dQDPVjXKsJC3v9BG6B22JvM908E18h6pGl5cN+ISMjfcd80K6T6Zc7eCn7BTDOjtgCe3vuNtNI+StlJzWwBd+jZ/K5hlHCYilGCG8KRoMUrxDyFT7o9ocUW3GweRqw2lADz5HBNyCPNDl04FZ0hqrqg2xfZ/BBADZQUEQAAAABJRU5ErkJggg=="))).convert("RGBA")
+    palette=((20,12,34),(49,26,76),(89,47,143),(148,85,207),(213,159,245))
+    pixels=[]
+    for r,g,b,a in base.getdata():
+        if not a:
+            pixels.append((0,0,0,0));continue
+        v=max(0,min(4,((r+g+b)/3-25)/185*4))
+        i=min(3,int(v));t=v-i
+        pixels.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
+    base.putdata(pixels)
+    im=base.resize((48,48),Image.Resampling.NEAREST)
+    original=im.copy()
+    d=ImageDraw.Draw(im)
+    # Locate the heavy head from the opaque upper-right vanilla pixels.
+    points=[(x,y) for y in range(24) for x in range(24,48) if original.getpixel((x,y))[3]]
+    if points:
+        x=(min(p[0] for p in points)+max(p[0] for p in points))//2
+        y=(min(p[1] for p in points)+max(p[1] for p in points))//2
+        # Compact black-hole core, purple event horizon and gold housing.
+        d.polygon([(x,y-7),(x+6,y-4),(x+7,y+2),(x+3,y+6),(x-3,y+6),(x-7,y+2),(x-6,y-4)],fill=(32,15,49,255))
+        d.ellipse((x-5,y-5,x+5,y+5),fill=(207,141,54,255))
+        d.ellipse((x-4,y-4,x+4,y+4),fill=(181,74,246,255))
+        d.ellipse((x-2,y-2,x+2,y+2),fill=(13,7,29,255))
+        d.line([(x-4,y-2),(x-2,y-4),(x+1,y-4)],fill=(246,204,255,255))
+        # Solid segmented orbit crossing the core, not transparent glow.
+        d.line([(x-9,y+3),(x-6,y+5),(x-1,y+4)],fill=(87,35,145,255),width=2)
+        d.line([(x+3,y+1),(x+7,y-2),(x+8,y-5)],fill=(194,110,255,255),width=2)
+        d.point((x+7,y-4),fill=(240,213,255,255))
+    # Reinforced gold bands only where the existing shaft is opaque.
+    for y in (29,30,38,39):
+        for x in range(25):
+            if original.getpixel((x,y))[3]:
+                d.point((x,y),fill=(210,145,53,255) if y%2 else (255,210,109,255))
+    # Scale without interpolation or partial alpha.
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -156,7 +194,7 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else texture)
+        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else gravitationsbrecher_sprite() if name=="gravitationsbrecher" else texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
