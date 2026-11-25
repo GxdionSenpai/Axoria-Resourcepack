@@ -170,12 +170,25 @@ for source_name,encoded in weapon_sources.items():
         if spear:
             palette=((30,13,55),(89,35,139),(170,86,224),(245,210,255)) if g>r*1.15 or b>r*1.15 else ((9,7,15),(24,19,35),(49,39,66),(79,65,99))
         else:
-            palette=((43,22,19),(128,65,21),(231,153,38),(255,235,157)) if r>g*1.15 and r>b*1.2 else ((29,15,53),(82,43,132),(154,96,215),(239,207,255))
+            palette=((8,12,24),(25,40,64),(59,91,125),(140,191,217)) if r>g*1.15 and r>b*1.2 else ((12,38,59),(25,103,139),(72,195,225),(222,253,255))
             if source_name=="crossbow_firework" and r>g*1.7: return (r,g,b,255)
         pos=min(2.999,light*3);i=int(pos);t=pos-i
         return tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,)
     original.putdata([recolour(px) for px in original.getdata()])
     im=original.resize((128,128),Image.Resampling.NEAREST)
+    if not spear:
+        # Preserve the outline, string and bolt; add a central faceted crystal
+        # only on the solid stock, with a dark socket and sharp cyan highlights.
+        mask=im.getchannel("A")
+        detail=Image.new("RGBA",(128,128),(0,0,0,0))
+        d=ImageDraw.Draw(detail)
+        d.polygon([(60,54),(71,64),(60,75),(49,64)],fill=(13,36,59,255))
+        d.polygon([(60,57),(68,64),(60,72),(52,64)],fill=(67,208,239,255))
+        d.polygon([(60,57),(60,64),(52,64)],fill=(218,255,255,255))
+        d.polygon([(60,64),(68,64),(60,72)],fill=(27,117,177,255))
+        from PIL import ImageChops
+        detail.putalpha(ImageChops.multiply(detail.getchannel("A"),mask))
+        im=Image.alpha_composite(im,detail)
     weapon_png=BytesIO();im.save(weapon_png,format="PNG")
     files["assets/axoria/textures/item/"+name+".png"]=weapon_png.getvalue()
     files["assets/axoria/models/item/"+name+".json"]=json.dumps({
@@ -401,15 +414,14 @@ for base, models in grouped.items():
         def crossbow_state(prefix):
             def model(suffix):
                 return {"type":"minecraft:model","model":prefix+suffix}
-            standby=model("")
-            return {"type":"minecraft:condition","property":"minecraft:using_item",
-                "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:crossbow/pull",
-                    "fallback":model("_pulling_0"),"entries":[
-                        {"threshold":0.58,"model":model("_pulling_1")},
-                        {"threshold":1.0,"model":model("_pulling_2")} ]},
-                "on_false":{"type":"minecraft:select","property":"minecraft:charge_type",
-                    "cases":[{"when":"arrow","model":model("_arrow")},{"when":"rocket","model":model("_firework")}],
-                    "fallback":standby}}
+            return {"type":"minecraft:select","property":"minecraft:charge_type",
+                "cases":[{"when":"arrow","model":model("_arrow")},{"when":"rocket","model":model("_firework")}],
+                "fallback":{"type":"minecraft:condition","property":"minecraft:using_item",
+                    "on_false":model(""),
+                    "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:crossbow/pull",
+                        "fallback":model("_pulling_0"),"entries":[
+                            {"threshold":0.58,"model":model("_pulling_1")},
+                            {"threshold":1.0,"model":model("_pulling_2")}]}}}
         vanilla_model=crossbow_state("minecraft:item/crossbow")
     if base=="trident":
         # Tridents do NOT have a generic flat item-model fallback when held.
