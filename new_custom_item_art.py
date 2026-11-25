@@ -5,6 +5,7 @@ Each 128x128 region is extracted losslessly; its transparent background uses
 alpha 0 and the visible pixels alpha 255 (never half-transparent).
 """
 import json
+import base64
 from io import BytesIO
 from pathlib import Path
 from PIL import Image, ImageDraw
@@ -35,6 +36,41 @@ def _put(files,name,image):
         "textures":{"layer0":"axoria:item/"+name}
     },separators=(",",":")).encode()
 
+def trichterherz_sprite():
+    # Original vanilla hopper item silhouette (Minecraft 1.21.4).
+    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUAAABiYWJSVVJKTEpBREE+Pj44ODgwMDAGhTNBAAAAAXRSTlMAQObYZgAAAFxJREFUeNpjwAaMgYABCILTgMCEgYFVLb28vCypgIE1SL283Ek1gIEh1FFQUKWUgYGB1TQ0NKQArFrJxJ0BBIIEhSEMVkHlAghDUQTCYAg0Z4CAIHcGCGAtQLYaAO5rD2YxW90wAAAAAElFTkSuQmCC")
+    base=Image.open(BytesIO(raw)).convert("RGBA")
+    palette=((65,16,49),(115,26,77),(181,46,116),(236,91,165),(255,166,215))
+    colors=[]
+    for r,g,b,a in base.getdata():
+        if not a:
+            colors.append((0,0,0,0));continue
+        v=max(0,min(4,((r+g+b)/3-42)/60*4))
+        i=min(3,int(v));t=v-i
+        colors.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
+    base.putdata(colors)
+    # Leave room for three axolotl gills on each side, without stretching
+    # the original hopper. Work on a crisp 32-pixel grid.
+    im=Image.new("RGBA",(32,32),(0,0,0,0))
+    d=ImageDraw.Draw(im)
+    for side in (-1,1):
+        for y,dy in ((9,-4),(13,-1),(17,2)):
+            x=7 if side==-1 else 24
+            tip=x+side*5
+            d.line((x,y,tip,y+dy),fill=(83,19,58,255),width=3)
+            d.line((x,y,tip,y+dy),fill=(243,88,157,255),width=1)
+            d.point((tip,y+dy-1),fill=(255,171,209,255))
+    im.alpha_composite(base.resize((24,24),Image.Resampling.NEAREST),(4,4))
+    d=ImageDraw.Draw(im)
+    # Centered pixel heart on the front of the hopper.
+    heart=[".##.##.","#######","#######",".#####.","..###..","...#..."]
+    for yy,row in enumerate(heart):
+        for xx,c in enumerate(row):
+            if c=="#":
+                d.point((12+xx,12+yy),fill=(255,211,235,255) if yy==0 else (255,54,128,255))
+    d.point((13,13),fill=(255,245,249,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -48,7 +84,7 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,texture)
+        _put(files,name,trichterherz_sprite() if name=="trichterherz" else texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
