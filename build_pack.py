@@ -155,6 +155,33 @@ render_items(files)
 items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_NAMES)))
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
+# Vanilla weapon geometry remains the basis of both new models.
+# Overlay ornaments are transparent and do not replace the vanilla sprite.
+from PIL import ImageDraw
+for name,base,cmd in (("seelenspeer","diamond_spear",1112),("donnerarmbrust","crossbow",1113)):
+    im=Image.new("RGBA",(128,128),(0,0,0,0))
+    draw=ImageDraw.Draw(im)
+    if name=="seelenspeer":
+        # Soul-coloured diamond blade and runic bands along the shaft.
+        draw.polygon([(96,8),(120,4),(116,28),(91,45),(82,35)],fill=(55,25,105,255))
+        draw.polygon([(99,12),(115,8),(110,25),(91,39),(87,34)],fill=(135,75,224,255))
+        draw.line([(99,12),(110,13),(94,30)],fill=(224,185,255,255),width=4)
+        for x,y in ((34,92),(50,76),(66,60)):
+            draw.line((x-4,y-4,x+4,y+4),fill=(119,67,210,255),width=5)
+    else:
+        # Golden coils, dark violet accents and a lightning rune.
+        draw.line([(15,35),(29,20),(49,20)],fill=(245,188,52,255),width=6)
+        draw.line([(93,103),(108,88),(108,69)],fill=(245,188,52,255),width=6)
+        draw.polygon([(64,39),(52,64),(65,64),(57,85),(82,56),(68,56),(77,39)],fill=(255,225,95,255))
+        draw.line([(32,83),(43,94)],fill=(101,49,162,255),width=6)
+    out=BytesIO();im.save(out,format="PNG")
+    files["assets/axoria/textures/item/"+name+".png"]=out.getvalue()
+    files["assets/axoria/models/item/"+name+".json"]=json.dumps({
+        "parent":"minecraft:item/handheld" if base=="diamond_spear" else "minecraft:item/generated",
+        "textures":{"layer0":"minecraft:item/"+base if base=="diamond_spear" else "minecraft:item/crossbow_standby","layer1":"axoria:item/"+name}
+    },separators=(",",":")).encode()
+    items.append((base,name,cmd))
+
 items.extend(("carrot_on_a_stick","raketenwerfer_reload_"+str(i),1211+i) for i in range(3))
 
 # Original vanilla 1.21.4 sprites with small opaque Guardian ornaments.
