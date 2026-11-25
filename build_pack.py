@@ -626,9 +626,35 @@ from PIL import ImageDraw
 # The ORIGINAL Mojang diamond armor UV and 16x16 icons are kept in
 # diamond-vanilla/. Recoloring their real pixels (instead of redrawing UV
 # rectangles) preserves the exact diamond armor shape, edges and shading.
-# This is a recolor ONLY, per the owner's explicit request.
+# Emerald and Amethyst use block-inspired patterns, preserving the original UV.
 def recolor_diamond(source,kind,output_size):
     image=Image.open(source).convert("RGBA")
+    if kind in ("emerald","amethyst"):
+        emerald=kind=="emerald"
+        palette=((8,77,32),(13,122,48),(19,161,64),(43,199,99),(108,232,154)) if emerald else (
+            (49,28,86),(77,48,125),(107,70,163),(145,103,196),(200,157,222))
+        # Emerald block: inset concentric square facets; amethyst block:
+        # irregular crystal patches and bright glints, at native pixel scale.
+        crystal=((1,1,2,3,2,0,1,2),(2,3,3,2,1,1,2,3),
+                 (3,4,2,1,0,2,3,2),(2,2,1,0,1,3,4,2),
+                 (1,0,2,3,3,2,1,1),(2,1,3,4,2,1,0,2),
+                 (3,2,2,1,1,2,3,3),(2,1,0,2,3,4,2,1))
+        lum=[0.2126*r+0.7152*g+0.0722*b for r,g,b,a in image.getdata() if a]
+        low,high=min(lum),max(lum)
+        for y in range(image.height):
+            for x in range(image.width):
+                r,g,b,a=image.getpixel((x,y))
+                if not a:continue
+                v=(0.2126*r+0.7152*g+0.0722*b-low)/max(1,high-low)
+                if emerald:
+                    xx,yy=x%8,y%8
+                    ring=min(xx,yy,7-xx,7-yy)
+                    idx=4 if ring in (1,3) and (xx==ring or yy==ring) else 0 if ring in (1,3) else 2 if ring==0 else 3
+                else:
+                    idx=crystal[y%8][x%8]
+                shade=0.72+0.40*v
+                image.putpixel((x,y),tuple(min(255,round(ch*shade)) for ch in palette[idx])+(a,))
+        return image.resize(output_size,Image.Resampling.NEAREST)
     if kind in ("s1_guardian","s1_elder_guardian"):
         # Repeating block-style pixel mosaic, masked by original diamond UV.
         # Dark prismarine has staggered rectangular tiles; normal prismarine
