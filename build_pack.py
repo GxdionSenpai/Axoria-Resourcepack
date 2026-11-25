@@ -174,8 +174,8 @@ for name,base,cmd in (("seelenspeer","diamond_spear",1112),("donnerarmbrust","cr
         draw.line([(93,103),(108,88),(108,69)],fill=(245,188,52,255),width=6)
         draw.polygon([(64,39),(52,64),(65,64),(57,85),(82,56),(68,56),(77,39)],fill=(255,225,95,255))
         draw.line([(32,83),(43,94)],fill=(101,49,162,255),width=6)
-    out=BytesIO();im.save(out,format="PNG")
-    files["assets/axoria/textures/item/"+name+".png"]=out.getvalue()
+    weapon_png=BytesIO();im.save(weapon_png,format="PNG")
+    files["assets/axoria/textures/item/"+name+".png"]=weapon_png.getvalue()
     files["assets/axoria/models/item/"+name+".json"]=json.dumps({
         "parent":"minecraft:item/handheld" if base=="diamond_spear" else "minecraft:item/generated",
         "textures":{"layer0":"minecraft:item/"+base if base=="diamond_spear" else "minecraft:item/crossbow_standby","layer1":"axoria:item/"+name}
