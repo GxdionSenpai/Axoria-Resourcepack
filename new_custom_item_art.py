@@ -71,6 +71,45 @@ def trichterherz_sprite():
     d.point((13,13),fill=(255,245,249,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def dimensionsklinge_sprite():
+    # Original Minecraft 1.21.4 netherite sword item PNG.
+    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAKlBMVEUAAACGe4ZwZ3BdVl1zRUNRRE5PPD5gNDI7OTtKKUAyJycvISIjEBIWCBTo6UOrAAAAAXRSTlMAQObYZgAAAFVJREFUeNpjgADOmVDGRBmogBCUMTHwAERAVQciMDkYJDCTgTMqB8ydMHXZAbACzawciEqlZQegSmMgNHdNFkRky4Eza0D0zB4GhjMgxiyoSoY7UAYAZfEWu0XQZ4wAAAAASUVORK5CYII=")
+    base=Image.open(BytesIO(raw)).convert("RGBA")
+    palette=((17,10,33),(42,24,76),(79,40,145),(147,80,221),(221,168,255))
+    pixels=[]
+    for r,g,b,a in base.getdata():
+        if not a:
+            pixels.append((0,0,0,0));continue
+        v=max(0,min(4,((r+g+b)/3-15)/122*4))
+        i=min(3,int(v));t=v-i
+        pixels.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
+    base.putdata(pixels)
+    im=base.resize((32,32),Image.Resampling.NEAREST)
+    original=im.copy()
+    draw=ImageDraw.Draw(im)
+    # A narrow cyan dimensional fissure inside the blade, retaining the
+    # vanilla blade edges. A broken diagonal gives a portal-energy effect.
+    for y in range(5,18):
+        xs=[x for x in range(12,31) if original.getpixel((x,y))[3]==255]
+        if len(xs)>=4 and y not in (9,13):
+            x=xs[len(xs)//2]
+            draw.point((x,y),fill=(112,220,255,255))
+            if y%3==0 and original.getpixel((x-1,y))[3]:
+                draw.point((x-1,y),fill=(204,166,255,255))
+    # Small angular portal crystal set into the blade/guard transition.
+    y=20
+    xs=[x for x in range(32) if original.getpixel((x,y))[3]==255]
+    if xs:
+        x=xs[len(xs)//2]
+        draw.polygon([(x,y-5),(x+4,y-1),(x+3,y+3),(x,y+5),
+                      (x-4,y+1),(x-3,y-3)],fill=(25,12,52,255))
+        draw.polygon([(x,y-4),(x+3,y),(x,y+4),(x-3,y)],
+                     fill=(124,48,199,255))
+        draw.polygon([(x,y-3),(x+2,y),(x,y+2),(x-1,y)],
+                     fill=(91,209,248,255))
+        draw.point((x,y-1),fill=(236,225,255,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -84,7 +123,7 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,trichterherz_sprite() if name=="trichterherz" else texture)
+        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
