@@ -480,6 +480,49 @@ for path, data in list(files.items()):
             raise RuntimeError("Invalid item PNG texture: " + path) from exc
 
 
+# Clean stray dark islands outside the original silhouettes of the reported
+# legacy tools. Eight-neighbor connectivity preserves diagonal pixel art.
+# Never erase dark pixels attached to the main sprite, or colored particles.
+def clean_legacy_black_specks(data):
+    im=Image.open(BytesIO(data)).convert("RGBA")
+    w,h=im.size
+    px=im.load()
+    remaining={(x,y) for y in range(h) for x in range(w) if px[x,y][3]}
+    components=[]
+    while remaining:
+        seed=remaining.pop()
+        component=[seed]
+        queue=deque([seed])
+        while queue:
+            x,y=queue.popleft()
+            for dy in (-1,0,1):
+                for dx in (-1,0,1):
+                    p=(x+dx,y+dy)
+                    if p in remaining:
+                        remaining.remove(p);component.append(p);queue.append(p)
+        components.append(component)
+    if not components:return data
+    main=max(components,key=len)
+    removed=0
+    for component in components:
+        if component is main:continue
+        if len(component)>max(4,len(main)//12):continue
+        # Isolated near-black artifacts, not intentional colored details.
+        if all(max(px[x,y][:3])<=55 for x,y in component):
+            for x,y in component:px[x,y]=(0,0,0,0)
+            removed+=len(component)
+    if not removed:return data
+    out=BytesIO()
+    im.save(out,format="PNG",optimize=True)
+    print("Removed stray dark pixels:",removed)
+    return out.getvalue()
+
+for name in ("gluecks_spitzhacke","gaertnerschere","enterhaken","flammenstab",
+             "blitzstab","phoenix_feder","monster_lupe"):
+    path="assets/axoria/textures/item/"+name+".png"
+    if path in files:
+        files[path]=clean_legacy_black_specks(files[path])
+
 # Official Axoria pause-menu styling. Keep ALL built-in font providers.
 # Earlier pack versions replaced default.json with incomplete references,
 # breaking symbols and resource pack rendering for other players.
