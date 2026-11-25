@@ -353,6 +353,36 @@ def schmiedekern_sprite():
         d.line((x,y-1,x,end-2),fill=(255,211,66,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def krabbenschere_sprite():
+    # Vanilla shears remain the underlying item. Rework their two jaws into
+    # the compact, right-facing orange crab pincer of the supplied reference.
+    # Each character is a solid pixel; the open gap is truly transparent.
+    rows=[
+        "................",
+        ".....DDDDDD.....",
+        "....DMMMMMMD....",
+        "...DMLLLLLMMD...",
+        "..DMLLHLMMMMMD..",
+        "..DMLHLLMMMMMMD.",
+        ".DMLHLLMMMSSSSD.",
+        ".DMLLLMMMDD..DD.",
+        ".DMLLMMMD.......",
+        ".DMMMMMMD.......",
+        ".DMMMMMMD...DD..",
+        "..DMMMMMSSSSMD..",
+        "..DMMMMMMMMMD...",
+        "...DSSMMMMMD....",
+        "....DDDDDDD.....",
+        "................",
+    ]
+    palette={".":(0,0,0,0),"D":(133,43,27,255),"S":(191,59,38,255),
+             "M":(240,91,57,255),"L":(255,139,75,255),"H":(255,211,133,255)}
+    im=Image.new("RGBA",(16,16))
+    im.putdata([palette[c] for row in rows for c in row])
+    # Preserve the reference's crisp chunky pixel style and omit its
+    # presentation-only white sticker border and brown background.
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -368,7 +398,7 @@ def render_items(files):
         # the forge core glows orange; deliberately NOT a uniform purple set.
         custom={"trichterherz":trichterherz_sprite,"dimensionsklinge":dimensionsklinge_sprite,
                 "titanfaust":titanfaust_sprite,"gravitationsbrecher":gravitationsbrecher_sprite,
-                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite}
+                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite,"krabbenschere":krabbenschere_sprite}
         if name in custom:
             texture=custom[name]()
         if name in ("dimensionsklinge","titanfaust","gravitationsbrecher","abyss_dreizack"):
