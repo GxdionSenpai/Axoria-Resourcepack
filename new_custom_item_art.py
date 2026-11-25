@@ -116,29 +116,14 @@ def dimensionsklinge_sprite():
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def titanfaust_sprite():
-    # Compact front-facing blue fist, matching the supplied pixel reference.
-    rows=[
-        "................",
-        ".......DD.......",
-        ".....DDLLD......",
-        "....DLLMLDD.....",
-        "...DLLMMLMDD....",
-        "..DLMMLDMLMDD...",
-        "..DLMMLDMLMDMD..",
-        ".DLLMMDMDDMDMD..",
-        ".DMLMMDMMDMMDMD.",
-        "..DMMDDDDMMMMDMD",
-        "...DMMSSMMMMMDMD",
-        "...DMMMMMMMMMDMD",
-        "....DMLLLLLMMD..",
-        ".....DMMMMMMD...",
-        ".....DSSSSSSD...",
-        "......DDDDDD....",
-    ]
-    palette={".":(0,0,0,0),"D":(25,42,66,255),"S":(43,68,104,255),
-             "M":(59,91,137,255),"L":(83,127,185,255)}
-    im=Image.new("RGBA",(16,16))
-    im.putdata([palette[c] for row in rows for c in row])
+    # Reconstruct the supplied reference's pixel grid and sampled blue shades.
+    rows=[".....MM......","....MLHLL....","...MMLLHLSS..","..SLHSLMLHHM.",".SMLLHMMLLLHS","SMHSLLSMMMSLS","SMLLSSSSSSMLS","MSMLDSMSSMLLS",".SMSSMMMMLLLS","..SDMMLLLLLLS","...DMMMMMMMM.","....DMMMMSS..",".....DDDDS..."]
+    palette={".":(0,0,0,0),"D":(20,34,53,255),"S":(39,59,89,255),
+             "M":(62,91,134,255),"L":(79,116,174,255),"H":(100,148,216,255)}
+    im=Image.new("RGBA",(16,16),(0,0,0,0))
+    for y,row in enumerate(rows):
+        for x,c in enumerate(row):
+            im.putpixel((x+1,y+1),palette[c])
     return im.resize((128,128),Image.Resampling.NEAREST)
 
 def gravitationsbrecher_sprite():
