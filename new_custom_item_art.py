@@ -307,6 +307,52 @@ def refine_weapon(image,name):
         line([(26,29),(27,33),(31,35),(35,34)],(37,141,225,255))
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def schmiedekern_sprite():
+    # Original netherite upgrade template from vanilla Minecraft.
+    raw=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAG1BMVEUAAABg6OhLyckgmriFQkJyMjJlKChRFRU0Dg6rizFlAAAAAXRSTlMAQObYZgAAAFhJREFUeNoFwYcNAgEMADFfQIj9p0Xfgg0AIPgAHITPLmjnMLCkNAym8goYoLkiDKjrOacwUNfD2WJg78rci4FNEgwkacNAVApvyBYg+K5V/Ah84QcAAPwB3LEZKARl0FcAAAAASUVORK5CYII=")
+    base=Image.open(BytesIO(raw)).convert("RGBA")
+    im=base.resize((64,64),Image.Resampling.NEAREST)
+    original=im.copy()
+    d=ImageDraw.Draw(im)
+    for y in range(64):
+        for x in range(64):
+            r,g,b,a=original.getpixel((x,y))
+            if not a:continue
+            if g>r*1.3 and b>r*1.3:
+                # Molten orange in the existing upgrade emblem.
+                v=g/255
+                c=(round(165+90*v),round(35+155*v),round(8+46*v))
+            else:
+                # Angular basalt shading and subtle stone grain.
+                v=(r+g+b)/3
+                grain=((x//3*17+y//3*11)%13)-6
+                k=max(20,min(155,round(v*1.05+grain)))
+                c=(k,max(15,k-4),max(15,k-2))
+            d.point((x,y),fill=c+(255,))
+    # Lava travels through cracks on the face and spills from the lower edge.
+    for points in (
+        [(32,23),(29,28),(31,34),(26,39),(26,46)],
+        [(39,29),(42,33),(38,39),(40,46)],
+        [(25,34),(20,36),(20,42)]):
+        for width,color in ((4,(77,22,19,255)),(2,(239,73,12,255)),(1,(255,198,57,255))):
+            overlay=Image.new("RGBA",(64,64),(0,0,0,0))
+            ImageDraw.Draw(overlay).line(points,fill=color,width=width)
+            for yy in range(64):
+                for xx in range(64):
+                    c=overlay.getpixel((xx,yy))
+                    if c[3] and original.getpixel((xx,yy))[3]:im.putpixel((xx,yy),c)
+    # Two connected drips extending below the stone plate, with dark crust.
+    for x,length in ((27,7),(37,4)):
+        ys=[y for y in range(64) if original.getpixel((x,y))[3]]
+        if not ys:continue
+        y=max(ys)
+        end=min(62,y+length)
+        if end<=y:continue
+        d.line((x,y-2,x,end),fill=(116,30,12,255),width=4)
+        d.line((x,y-2,x,end-1),fill=(245,88,13,255),width=2)
+        d.line((x,y-1,x,end-2),fill=(255,211,66,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -322,7 +368,7 @@ def render_items(files):
         # the forge core glows orange; deliberately NOT a uniform purple set.
         custom={"trichterherz":trichterherz_sprite,"dimensionsklinge":dimensionsklinge_sprite,
                 "titanfaust":titanfaust_sprite,"gravitationsbrecher":gravitationsbrecher_sprite,
-                "abyss_dreizack":abyss_dreizack_sprite}
+                "abyss_dreizack":abyss_dreizack_sprite,"schmiedekern":schmiedekern_sprite}
         if name in custom:
             texture=custom[name]()
         if name in ("dimensionsklinge","titanfaust","gravitationsbrecher","abyss_dreizack"):
