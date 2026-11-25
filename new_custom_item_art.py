@@ -163,21 +163,23 @@ def gravitationsbrecher_sprite():
     im=base.resize((48,48),Image.Resampling.NEAREST)
     original=im.copy()
     d=ImageDraw.Draw(im)
-    # Locate the heavy head from the opaque upper-right vanilla pixels.
-    points=[(x,y) for y in range(24) for x in range(24,48) if original.getpixel((x,y))[3]]
-    if points:
-        x=(min(p[0] for p in points)+max(p[0] for p in points))//2
-        y=(min(p[1] for p in points)+max(p[1] for p in points))//2
-        # Compact black-hole core, purple event horizon and gold housing.
-        d.polygon([(x,y-7),(x+6,y-4),(x+7,y+2),(x+3,y+6),(x-3,y+6),(x-7,y+2),(x-6,y-4)],fill=(32,15,49,255))
-        d.ellipse((x-5,y-5,x+5,y+5),fill=(207,141,54,255))
-        d.ellipse((x-4,y-4,x+4,y+4),fill=(181,74,246,255))
-        d.ellipse((x-2,y-2,x+2,y+2),fill=(13,7,29,255))
-        d.line([(x-4,y-2),(x-2,y-4),(x+1,y-4)],fill=(246,204,255,255))
-        # Solid segmented orbit crossing the core, not transparent glow.
-        d.line([(x-9,y+3),(x-6,y+5),(x-1,y+4)],fill=(87,35,145,255),width=2)
-        d.line([(x+3,y+1),(x+7,y-2),(x+8,y-5)],fill=(194,110,255,255),width=2)
-        d.point((x+7,y-4),fill=(240,213,255,255))
+    # Replace the entire vanilla mace head with the gravity eye itself.
+    # Keep the diagonal shaft and its connection to the new circular head.
+    for y in range(48):
+        for x in range(48):
+            if x-y>=12:
+                im.putpixel((x,y),(0,0,0,0))
+    x,y=34,13
+    d.line((22,25,30,17),fill=(32,15,49,255),width=7)
+    d.line((22,25,30,17),fill=(89,47,143,255),width=3)
+    d.ellipse((x-11,y-11,x+11,y+11),fill=(32,15,49,255))
+    d.ellipse((x-9,y-9,x+9,y+9),fill=(89,47,143,255))
+    d.ellipse((x-7,y-7,x+7,y+7),fill=(207,141,54,255))
+    d.ellipse((x-6,y-6,x+6,y+6),fill=(181,74,246,255))
+    d.ellipse((x-4,y-4,x+4,y+4),fill=(13,7,29,255))
+    d.arc((x-6,y-6,x+6,y+6),190,290,fill=(246,204,255,255),width=2)
+    d.arc((x-10,y-10,x+10,y+10),20,155,fill=(148,85,207,255),width=2)
+    d.arc((x-9,y-9,x+9,y+9),195,285,fill=(213,159,245,255))
     # Reinforced gold bands only where the existing shaft is opaque.
     for y in (29,30,38,39):
         for x in range(25):
@@ -286,15 +288,9 @@ def refine_weapon(image,name):
                 d.point((x,y),fill=(255,223,133,255))
                 if px[x+1,y+1][3]:d.point((x+1,y+1),fill=(114,66,30,255))
     elif name=="gravitationsbrecher":
-        # Give the event horizon a fine luminous inner rim, not a flat ring.
-        for y in range(2,36):
-            for x in range(26,63):
-                r,g,b,a=px[x,y]
-                if a and r>120 and b>150 and b>g*1.25:
-                    if (x+y)%5==0:d.point((x,y),fill=(242,192,255,255))
-                    elif (x-y)%4==0:d.point((x,y),fill=(125,47,199,255))
-        line([(31,24),(37,27),(45,25),(52,20),(58,13)],(191,104,251,255))
-        line([(32,25),(37,28),(45,26),(52,21)],(76,33,137,255))
+        # Keep the new circular eye and dark pupil clean; the sprite
+        # itself contains the layered ring highlights.
+        pass
     elif name=="abyss_dreizack":
         # Thin foam crests and sapphire facets, leaving the fork gaps open.
         for y in range(3,40):
