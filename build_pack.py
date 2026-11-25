@@ -219,7 +219,7 @@ for bow_name in ("sternenbogen","sternenbogen_charged"):
 
 def guardian_weapon_sprite(source,elder=False):
     sprite=Image.open(BytesIO(base64.b64decode(guardian_vanilla[source]))).convert("RGBA")
-    palette=((13,34,32),(30,70,60),(58,112,94),(100,163,141),(177,213,185)) if elder else (
+    palette=((37,40,42),(77,80,79),(128,129,122),(179,178,165),(222,219,203)) if elder else (
         (21,48,49),(43,92,94),(74,143,138),(126,190,177),(207,237,218))
     colors=[]
     for r,g,b,a in sprite.getdata():
@@ -235,9 +235,9 @@ def guardian_weapon_sprite(source,elder=False):
     # inlays, rather than oversized ornaments or translucent glows.
     sprite=sprite.resize((32,32),Image.Resampling.NEAREST)
     original=sprite.copy()
-    coral=(220,126,64,255) if not elder else (191,151,92,255)
-    edge=(24,69,64,255) if not elder else (18,49,40,255)
-    crystal=(173,235,208,255) if not elder else (155,209,163,255)
+    coral=(220,126,64,255) if not elder else (173,143,107,255)
+    edge=(24,69,64,255) if not elder else (54,56,55,255)
+    crystal=(173,235,208,255) if not elder else (208,205,188,255)
     def opaque(x,y):
         return 0<=x<32 and 0<=y<32 and original.getpixel((x,y))[3]==255
     def spur(x,y,dx,dy):
@@ -285,12 +285,11 @@ def guardian_weapon_sprite(source,elder=False):
     from PIL import ImageDraw
     draw=ImageDraw.Draw(sprite)
     if source=="trident":
-        # Center the Elder Guardian eye on the diagonal shaft, below
-        # the fork, rather than on the outer prongs.
-        y=17
+        # Restore original eye height and move it two grid pixels left.
+        y=13
         xs=[x for x in range(32) if opaque(x,y)]
         if xs:
-            x=(min(xs)+max(xs))//2
+            x=xs[len(xs)//2]-2
             draw.polygon([(x-5,y),(x-3,y-3),(x+3,y-3),(x+5,y),
                           (x+3,y+3),(x-3,y+3)],fill=(61,58,48,255))
             draw.polygon([(x-4,y),(x-2,y-2),(x+2,y-2),(x+4,y),
