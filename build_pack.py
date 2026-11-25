@@ -155,32 +155,42 @@ render_items(files)
 items.extend((base,name,1101+i) for i,(base,name) in enumerate(zip(NEW_BASE,NEW_NAMES)))
 # Bright bow model for charged starshot after five hits.
 items.append(("bow","sternenbogen_charged",1111))
-# Vanilla weapon geometry remains the basis of both new models.
-# Overlay ornaments are transparent and do not replace the vanilla sprite.
+# Recolour authentic vanilla 1.21.11 weapon sprites; preserve all silhouettes.
+import base64
 from PIL import ImageDraw
-for name,base,cmd in (("seelenspeer","diamond_spear",1112),("donnerarmbrust","crossbow",1113)):
-    im=Image.new("RGBA",(128,128),(0,0,0,0))
-    draw=ImageDraw.Draw(im)
-    if name=="seelenspeer":
-        # Soul-coloured diamond blade and runic bands along the shaft.
-        draw.polygon([(96,8),(120,4),(116,28),(91,45),(82,35)],fill=(55,25,105,255))
-        draw.polygon([(99,12),(115,8),(110,25),(91,39),(87,34)],fill=(135,75,224,255))
-        draw.line([(99,12),(110,13),(94,30)],fill=(224,185,255,255),width=4)
-        for x,y in ((34,92),(50,76),(66,60)):
-            draw.line((x-4,y-4,x+4,y+4),fill=(119,67,210,255),width=5)
-    else:
-        # Golden coils, dark violet accents and a lightning rune.
-        draw.line([(15,35),(29,20),(49,20)],fill=(245,188,52,255),width=6)
-        draw.line([(93,103),(108,88),(108,69)],fill=(245,188,52,255),width=6)
-        draw.polygon([(64,39),(52,64),(65,64),(57,85),(82,56),(68,56),(77,39)],fill=(255,225,95,255))
-        draw.line([(32,83),(43,94)],fill=(101,49,162,255),width=6)
+weapon_sources={"diamond_spear":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAMFBMVEUAAAAIJSAoHguJZyceincz68vy//2k/fArx6y6XzRoTh6jSyJBGAVnKQtJNhUOPzZI1cKBAAAAAXRSTlMAQObYZgAAAEdJREFUeNqFyzkSwCAMA0CZ4CMX/v9vM6mwaFC30giUzGS6SaW6qUyGazEy/r3Xh1pUY3j0WoyrCflogAh5Zu939fmwbzZWf1aQAisoA8WXAAAAAElFTkSuQmCC","crossbow_standby":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAKlBMVEUAAABNLhFtQhgqGgmQWB87JA21cy9IKxCXl5dtbW2WlpY2IAtEREQfEgbgySe3AAAAAXRSTlMAQObYZgAAAGhJREFUeNoFwYEBgjAQBLDct6hAb/91TQBAACDJmgC/W/aemQT8OJ/rupYD3PK5igNw9pXUDZB9JZMHwHybyZMCspfmyaRA9uLJZFKQ4dZM5gVrO2gmU2RyQN/JW6wF0DdTANBpAYDWHyfQAnPEy7OdAAAAAElFTkSuQmCC","crossbow_pulling_0":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAKlBMVEUAAABNLhFtQhgqGgk2IAuQWB87JA21cy9IKxCXl5dERESWlpZtbW0fEgZmTV4YAAAAAXRSTlMAQObYZgAAAGlJREFUeNoFwYEBwyAMAzA5FLoC+f/dSQAgAJBkVIDvypxVlYCP/a61hg1ceVfDBuy5kuYCMldS6QtQv06lcgCZQ6dy0kDmoHNupUEK96RSDxiTS6dSjVT2hn4qT2MMgH5SDQC6ugGAbn8/aQKQl1W/vgAAAABJRU5ErkJggg==","crossbow_pulling_1":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAKlBMVEUAAABNLhFtQhgqGgk2IAuQWB87JA21cy9IKxCXl5dERESWlpZtbW0fEgZmTV4YAAAAAXRSTlMAQObYZgAAAGpJREFUeNoFwYEBwyAMAzA5FLoC+f/dSQAgAJBkVIDvypxVlYCP/a61hg1ceVfDBuy5ksYFMldSaRdQv06l0gfIHDqVygEyB53KSYMUdM6tB4yJe04q1Uhl74t+Kk9jDIB+Ug0AuroBgG5/RVUCpiXCW8kAAAAASUVORK5CYII=","crossbow_pulling_2":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAKlBMVEUAAABNLhFtQhgqGgmQWB87JA21cy9IKxCXl5c2IAtERESWlpZtbW0fEgYfy/EgAAAAAXRSTlMAQObYZgAAAGdJREFUeNpVylECgzAIA9AEipu0uf91py1ODV95BM/wVUi3ku8AWzMzcnUgt4hw5BoMcAsBuADZgtR8zfDsRv3BPqJNGTVwlNxQ0hcYULIW3nBJ1xwwcxzpx+2nuKOinSY8I5PwFuEHQpUCyPXLZ+cAAAAASUVORK5CYII=","crossbow_arrow":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAOVBMVEUAAABNLhFtbW0qGgmWlpaQWB9EREQ7JA3///+1cy9IKxDY2NhFMg02IAttTxiJZydUPRJtQhgfEgbSCYY+AAAAAXRSTlMAQObYZgAAAHBJREFUeNpVzFkSBCEIA9AgLj1Lq+T+hx1H6S38wKsUuEceh4jakm0LkJTMTBw+Mb9KKYq8yiG2KhzLAci19SnB3yXprRtPsDddghcUtCkXuMQFBkypfTU0weUbOQuScxiJY/a/qMLDXYy4h0biKcQPUpcEyZ8ZLIwAAAAASUVORK5CYII=","crossbow_firework":"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAASFBMVEUAAAAfEgZtQhhtbW2WlpYiJTAvNk0XGiTWKiq5KSmEGxuZKSlcgYmyzNFtFxf09PS1cy9IKxA7JA02IAtERESQWB8qGglNLhFECIfZAAAAAXRSTlMAQObYZgAAAIBJREFUeNpVylsWgyAMRdGbKDWIaItA5j/TQqQPT76y14WIDxgpWl7WzR7Vyl3CvkWBlsLM2mFfg5fjmVKqyLBCPKIQWgOweXHaZYKlZXUPx/QFfpGaDNBSQWzyA5OF5wsY6LK45VrUgo/MZAPNeWrN7c4utWJEpzLhP2Ii3IXwBnOeBWQmvYbvAAAAAElFTkSuQmCC"}
+for source_name,encoded in weapon_sources.items():
+    spear=source_name=="diamond_spear"
+    name="seelenspeer" if spear else "donnerarmbrust"+source_name.removeprefix("crossbow").replace("_standby","")
+    original=Image.open(BytesIO(base64.b64decode(encoded))).convert("RGBA")
+    def recolour(px):
+        r,g,b,a=px
+        if not a:return (0,0,0,0)
+        light=(.2126*r+.7152*g+.0722*b)/255
+        if spear:
+            palette=((30,13,55),(89,35,139),(170,86,224),(245,210,255)) if g>r*1.15 or b>r*1.15 else ((25,17,39),(64,39,88),(139,86,171),(213,170,240))
+        else:
+            palette=((43,22,19),(128,65,21),(231,153,38),(255,235,157)) if r>g*1.15 and r>b*1.2 else ((29,15,53),(82,43,132),(154,96,215),(239,207,255))
+            if source_name=="crossbow_firework" and r>g*1.7: return (r,g,b,255)
+        pos=min(2.999,light*3);i=int(pos);t=pos-i
+        return tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,)
+    original.putdata([recolour(px) for px in original.getdata()])
+    im=original.resize((128,128),Image.Resampling.NEAREST)
+    # Faceted highlights and inlaid runes only on solid weapon pixels.
+    mask=im.getchannel("A")
+    d=ImageDraw.Draw(im)
+    accent=(242,195,255,255) if spear else (255,224,105,255)
+    for y in range(4,124,8):
+        for x in range(4,124,8):
+            if all(mask.getpixel((xx,yy))==255 for xx,yy in ((x-2,y-2),(x+2,y-2),(x-2,y+2),(x+2,y+2))) and (x//8+y//8)%5==1:
+                d.line((x-2,y+1,x+1,y-2),fill=accent,width=2)
     weapon_png=BytesIO();im.save(weapon_png,format="PNG")
     files["assets/axoria/textures/item/"+name+".png"]=weapon_png.getvalue()
     files["assets/axoria/models/item/"+name+".json"]=json.dumps({
-        "parent":"minecraft:item/handheld" if base=="diamond_spear" else "minecraft:item/generated",
-        "textures":{"layer0":"minecraft:item/"+base if base=="diamond_spear" else "minecraft:item/crossbow_standby","layer1":"axoria:item/"+name}
+        "parent":"minecraft:item/handheld" if spear else "minecraft:item/crossbow_"+("standby" if source_name=="crossbow_standby" else source_name.removeprefix("crossbow_")),
+        "textures":{"layer0":"axoria:item/"+name}
     },separators=(",",":")).encode()
-    items.append((base,name,cmd))
+items.extend((("diamond_spear","seelenspeer",1112),("crossbow","donnerarmbrust",1113)))
 
 items.extend(("carrot_on_a_stick","raketenwerfer_reload_"+str(i),1211+i) for i in range(3))
 
@@ -395,6 +405,20 @@ for base,custom,value in items:
 for base, models in grouped.items():
     vanilla = ("axoria:item/vanilla_clock" if base=="clock" else "minecraft:item/"+base)
     vanilla_model={"type":"minecraft:model","model":vanilla}
+    if base=="crossbow":
+        def crossbow_state(prefix):
+            def model(suffix):
+                return {"type":"minecraft:model","model":prefix+suffix}
+            standby=model("_standby" if prefix=="minecraft:item/crossbow" else "")
+            return {"type":"minecraft:condition","property":"minecraft:using_item",
+                "on_true":{"type":"minecraft:range_dispatch","property":"minecraft:crossbow/pull",
+                    "fallback":model("_pulling_0"),"entries":[
+                        {"threshold":0.58,"model":model("_pulling_1")},
+                        {"threshold":1.0,"model":model("_pulling_2")} ]},
+                "on_false":{"type":"minecraft:select","property":"minecraft:charge_type",
+                    "cases":[{"when":"arrow","model":model("_arrow")},{"when":"rocket","model":model("_firework")}],
+                    "fallback":standby}}
+        vanilla_model=crossbow_state("minecraft:item/crossbow")
     if base=="trident":
         # Tridents do NOT have a generic flat item-model fallback when held.
         # Vanilla uses a 2D item in GUI/ground/fixed, and a special 3D
@@ -430,6 +454,8 @@ for base, models in grouped.items():
     entries=[]
     for custom,value in sorted(models,key=lambda pair:pair[1]):
         custom_model={"type":"minecraft:model","model":"axoria:item/"+custom}
+        if custom=="donnerarmbrust":
+            custom_model=crossbow_state("axoria:item/donnerarmbrust")
         if custom in ("s1_tiefenjaegerbogen","sternenbogen","sternenbogen_charged"):
             custom_model={"type":"minecraft:condition","property":"minecraft:using_item",
                 "on_false":custom_model,
