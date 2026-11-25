@@ -886,6 +886,46 @@ assert all(any(p.get("id")==id for p in font_check["providers"])
            for id in ("minecraft:include/space","minecraft:include/default",
                       "minecraft:include/unifont"))
 
+# Exclusive Axoria treasure chest, with its own item-model key.
+# No vanilla chest or ender chest assets are overridden.
+from PIL import ImageDraw
+im=Image.new("RGBA",(64,64))
+d=ImageDraw.Draw(im)
+for y in range(64):
+    for x in range(64):
+        if y<16:
+            c=[(75,35,24),(96,46,29),(115,57,33),(130,68,39)][(x*7+y*11)%4]
+            if y%5==0:c=(53,25,20)
+        elif y<32:
+            c=[(132,76,19),(192,122,30),(240,178,53),(255,215,105)][(x+y*3)%4]
+        elif y<48:
+            c=[(39,13,48),(71,24,86),(111,38,123),(151,58,157)][(x+y)%4]
+        else:
+            c=[(109,32,94),(181,48,142),(240,93,183),(255,171,225)][(x+y)%4]
+        d.point((x,y),fill=(*c,255))
+bio=BytesIO();im.save(bio,format="PNG")
+files["assets/axoria/textures/block/treasure_chest.png"]=bio.getvalue()
+elements=[]
+def treasure_box(lo,hi,band):
+    uv=[0,band*4,16,band*4+4]
+    elements.append({"from":lo,"to":hi,"faces":{face:{"uv":uv,"texture":"#chest"} for face in ("north","south","east","west","up","down")}})
+treasure_box([1,0,1],[15,9,15],0)
+treasure_box([1,9,1],[15,12,15],0)
+treasure_box([2,12,1],[14,13,15],0)
+treasure_box([4,13,1],[12,14,15],0)
+for x in (1,12):
+    treasure_box([x,0,0.8],[x+3,12,15.2],1)
+    treasure_box([x,12,1],[x+3,13,15],1)
+treasure_box([4,13,1],[5,14.2,15],1)
+treasure_box([11,13,1],[12,14.2,15],1)
+treasure_box([1,0,0.7],[15,1.5,15.3],1)
+treasure_box([1,8,0.6],[15,9,15.4],1)
+treasure_box([6,6,0],[10,11,1],1)
+treasure_box([7,7,-0.2],[9,9,0.2],2)
+treasure_box([7.5,8,-0.4],[8.5,9,-0.1],3)
+files["assets/axoria/models/item/treasure_chest.json"]=json.dumps({"textures":{"chest":"axoria:block/treasure_chest","particle":"axoria:block/treasure_chest"},"elements":elements}).encode()
+files["assets/axoria/items/treasure_chest.json"]=json.dumps({"model":{"type":"minecraft:model","model":"axoria:item/treasure_chest"}}).encode()
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
