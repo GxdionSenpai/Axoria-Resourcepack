@@ -181,6 +181,52 @@ def gravitationsbrecher_sprite():
     # Scale without interpolation or partial alpha.
     return im.resize((128,128),Image.Resampling.NEAREST)
 
+def abyss_dreizack_sprite():
+    # Original vanilla trident silhouette, with a deep-ocean sapphire palette.
+    # Deliberately distinct from the green Elder Guardian eye design.
+    base=Image.open(BytesIO(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbUlEQVQ4y2NgoAeYNm3afxCgSPONGzfABoBoog3DpRkkTrQBZGsGgezs7P96cQH/0TUT7Q2Q5oi5fWBD0DWDDCfKAIfKTDBGdglRmsXcLcEaQTQIgzTBMNE2gzSSHO8wf480zWQHGCy6yNYMBACktqum4kbbjgAAAABJRU5ErkJggg=="))).convert("RGBA")
+    palette=((9,19,46),(15,40,91),(23,83,161),(42,159,222),(163,237,255))
+    pixels=[]
+    for r,g,b,a in base.getdata():
+        if not a:
+            pixels.append((0,0,0,0));continue
+        v=max(0,min(4,(0.2126*r+0.7152*g+0.0722*b-25)/205*4))
+        i=min(3,int(v));t=v-i
+        pixels.append(tuple(round(palette[i][k]*(1-t)+palette[i+1][k]*t) for k in range(3))+(255,))
+    base.putdata(pixels)
+    im=base.resize((32,32),Image.Resampling.NEAREST)
+    original=im.copy()
+    d=ImageDraw.Draw(im)
+    # Add icy cyan highlights to the three prongs, inside their outlines.
+    for y in range(1,12):
+        xs=[x for x in range(14,32) if original.getpixel((x,y))[3]]
+        runs=[]
+        for x in xs:
+            if runs and x==runs[-1][-1]+1:runs[-1].append(x)
+            else:runs.append([x])
+        for run in runs:
+            if len(run)>=2 and y%3!=2:
+                d.point((run[len(run)//2],y),fill=(132,233,255,255))
+    # A compact asymmetric whirlpool wraps around the shaft below the fork.
+    # Use connected, opaque pixels rather than an eye or a floating glow.
+    y=14
+    xs=[x for x in range(32) if original.getpixel((x,y))[3]]
+    if xs:
+        x=xs[len(xs)//2]
+        outer=[(x-3,y-4),(x-6,y-2),(x-6,y+1),(x-3,y+4),
+               (x+2,y+4),(x+5,y+2),(x+6,y-1)]
+        d.line(outer,fill=(9,32,77,255),width=3)
+        d.line(outer,fill=(30,136,220,255),width=2)
+        d.line([(x-5,y-1),(x-5,y+1),(x-3,y+3),(x+1,y+3)],fill=(154,239,255,255))
+        d.line([(x+2,y+1),(x+1,y-1),(x-1,y-1),(x-2,y+1)],
+               fill=(68,191,247,255))
+    # Silver-blue shaft bands, kept inside the original silhouette.
+    for y in (20,21,25,26):
+        for x in range(32):
+            if original.getpixel((x,y))[3]:
+                d.point((x,y),fill=(151,224,249,255) if y%2==0 else (46,108,176,255))
+    return im.resize((128,128),Image.Resampling.NEAREST)
+
 def render_items(files):
     if not ATLAS.is_file():
         raise FileNotFoundError("Missing original 128px Axoria art source: "+str(ATLAS))
@@ -194,7 +240,7 @@ def render_items(files):
         # AWAY FROM the bottom-right holding grip, never pointed at the user.
         # The crab claw stays orange/red, the abyss trident is turquoise and
         # the forge core glows orange; deliberately NOT a uniform purple set.
-        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else gravitationsbrecher_sprite() if name=="gravitationsbrecher" else texture)
+        _put(files,name,trichterherz_sprite() if name=="trichterherz" else dimensionsklinge_sprite() if name=="dimensionsklinge" else titanfaust_sprite() if name=="titanfaust" else gravitationsbrecher_sprite() if name=="gravitationsbrecher" else abyss_dreizack_sprite() if name=="abyss_dreizack" else texture)
 
     # Replace the actual Skyblock hotbar BOOK, CustomModelData 1016, too.
     # It shows a PINK AXOLOTL centered on an ornate blue/gold cover.
