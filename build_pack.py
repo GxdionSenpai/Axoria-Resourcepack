@@ -1084,6 +1084,16 @@ elements=separate_treasure_faces(elements)
 files["assets/axoria/models/item/treasure_chest.json"]=json.dumps({"textures":{"chest":"axoria:block/treasure_chest","particle":"axoria:block/treasure_chest"},"elements":elements}).encode()
 files["assets/axoria/items/treasure_chest.json"]=json.dumps({"model":{"type":"minecraft:model","model":"axoria:item/treasure_chest"}}).encode()
 
+# Optional recorded Elder Guardian introduction.
+elder_intro = Path(__file__).resolve().parent / "audio" / "elder_intro.ogg"
+if elder_intro.is_file():
+    files["assets/axoria/sounds/guardian/elder_intro.ogg"] = elder_intro.read_bytes()
+    sound_definitions = json.loads(files.get("assets/axoria/sounds.json", b"{}"))
+    sound_definitions["guardian.elder_intro"] = {"sounds": [{"name": "axoria:guardian/elder_intro", "stream": True, "attenuation_distance": 64}]}
+    files["assets/axoria/sounds.json"] = json.dumps(sound_definitions).encode()
+else:
+    print("WARNING: audio/elder_intro.ogg missing; Elder voice not included")
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
