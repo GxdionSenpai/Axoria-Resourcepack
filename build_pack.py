@@ -1121,9 +1121,20 @@ for track in ("elder_battle_1", "elder_battle_2"):
     asset = "assets/axoria/sounds/guardian/" + track + ".ogg"
     if asset not in files:
         raise RuntimeError("Missing boss soundtrack: " + asset)
-    raw = files[asset]
-    if not raw.startswith(b"OggS") or b"\\x01vorbis" not in raw[:65536]:
-        raise RuntimeError("Boss soundtrack must be Ogg Vorbis: " + track)
+    # Normalize uploaded audio regardless of its file extension or source codec.
+    import subprocess
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp:
+        output = Path(temp) / (track + ".ogg")
+        source = Path(__file__).resolve().parent / "audio" / (track + ".ogg")
+        subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+                        "-y", "-i", str(source), "-map", "0:a:0", "-vn",
+                        "-c:a", "libvorbis", "-q:a", "5", "-ar", "44100",
+                        "-ac", "2", str(output)], check=True)
+        raw = output.read_bytes()
+    if not raw.startswith(b"OggS") or b"\x01vorbis" not in raw[:65536]:
+        raise RuntimeError("Conversion failed: " + track)
+    files[asset] = raw
     print("Verified boss soundtrack:", track, len(raw), "bytes")
     definitions = json.loads(files.get("assets/minecraft/sounds.json", b"{}"))
     definitions["axoria.guardian." + track] = {"sounds": [{"name": "axoria:guardian/" + track, "stream": True, "attenuation_distance": 256}]}
