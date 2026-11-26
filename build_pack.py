@@ -1085,6 +1085,18 @@ files["assets/axoria/models/item/treasure_chest.json"]=json.dumps({"textures":{"
 files["assets/axoria/items/treasure_chest.json"]=json.dumps({"model":{"type":"minecraft:model","model":"axoria:item/treasure_chest"}}).encode()
 
 # Optional recorded Elder Guardian introduction.
+# GxdionSenpai story voice lines: optional until each recording is supplied.
+# Keep existing Elder Guardian voices and all other sound definitions.
+for quest_number in range(1, 25):
+    voice_name = f"gxdion_quest_{quest_number:02d}"
+    voice_file = Path(__file__).resolve().parent / "audio" / f"{voice_name}.ogg"
+    if not voice_file.is_file():
+        continue
+    files[f"assets/axoria/sounds/guardian/{voice_name}.ogg"] = voice_file.read_bytes()
+    sound_definitions = json.loads(files.get("assets/axoria/sounds.json", b"{}"))
+    sound_definitions[f"guardian.{voice_name}"] = {"sounds": [{"name": f"axoria:guardian/{voice_name}", "stream": True, "attenuation_distance": 64}]}
+    files["assets/axoria/sounds.json"] = json.dumps(sound_definitions).encode()
+
 elder_intro = Path(__file__).resolve().parent / "audio" / "elder_intro.ogg"
 if elder_intro.is_file():
     files["assets/axoria/sounds/guardian/elder_intro.ogg"] = elder_intro.read_bytes()
