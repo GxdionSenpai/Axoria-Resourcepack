@@ -1115,6 +1115,19 @@ for track in ("elder_battle_1", "elder_battle_2"):
     else:
         print("WARNING: missing combat track " + str(source))
 
+# Validate the published audio and make the music available under the default
+# namespace as well, for clients with custom namespace sound lookup problems.
+for track in ("elder_battle_1", "elder_battle_2"):
+    asset = "assets/axoria/sounds/guardian/" + track + ".ogg"
+    if asset not in files:
+        raise RuntimeError("Missing boss soundtrack: " + asset)
+    raw = files[asset]
+    if not raw.startswith(b"OggS") or b"\\x01vorbis" not in raw[:65536]:
+        raise RuntimeError("Boss soundtrack must be Ogg Vorbis: " + track)
+    print("Verified boss soundtrack:", track, len(raw), "bytes")
+    definitions = json.loads(files.get("assets/minecraft/sounds.json", b"{}"))
+    definitions["axoria.guardian." + track] = {"sounds": [{"name": "axoria:guardian/" + track, "stream": True, "attenuation_distance": 256}]}
+    files["assets/minecraft/sounds.json"] = json.dumps(definitions).encode()
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
