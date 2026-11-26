@@ -1094,6 +1094,16 @@ if elder_intro.is_file():
 else:
     print("WARNING: audio/elder_intro.ogg missing; Elder voice not included")
 
+# Recorded Elder Guardian final dialogue.
+elder_death = Path(__file__).resolve().parent / "audio" / "elder_death.ogg"
+if elder_death.is_file():
+    files["assets/axoria/sounds/guardian/elder_death.ogg"] = elder_death.read_bytes()
+    sound_definitions = json.loads(files.get("assets/axoria/sounds.json", b"{}"))
+    sound_definitions["guardian.elder_death"] = {"sounds": [{"name": "axoria:guardian/elder_death", "stream": True, "attenuation_distance": 64}]}
+    files["assets/axoria/sounds.json"] = json.dumps(sound_definitions).encode()
+else:
+    print("WARNING: audio/elder_death.ogg missing; Elder final voice not included")
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
