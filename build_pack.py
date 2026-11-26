@@ -1104,6 +1104,17 @@ if elder_death.is_file():
 else:
     print("WARNING: audio/elder_death.ogg missing; Elder final voice not included")
 
+# Elder Guardian combat playlist, streamed to avoid decoding the full tracks into memory.
+for track in ("elder_battle_1", "elder_battle_2"):
+    source = Path(__file__).resolve().parent / "audio" / (track + ".ogg")
+    if source.is_file():
+        files["assets/axoria/sounds/guardian/" + track + ".ogg"] = source.read_bytes()
+        sound_definitions = json.loads(files.get("assets/axoria/sounds.json", b"{}"))
+        sound_definitions["guardian." + track] = {"sounds": [{"name": "axoria:guardian/" + track, "stream": True}]}
+        files["assets/axoria/sounds.json"] = json.dumps(sound_definitions).encode()
+    else:
+        print("WARNING: missing combat track " + str(source))
+
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
