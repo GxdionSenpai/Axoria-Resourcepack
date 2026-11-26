@@ -1139,6 +1139,56 @@ for track in ("elder_battle_1", "elder_battle_2"):
     definitions = json.loads(files.get("assets/minecraft/sounds.json", b"{}"))
     definitions["axoria.guardian." + track] = {"sounds": [{"name": "axoria:guardian/" + track, "stream": True, "attenuation_distance": 256}]}
     files["assets/minecraft/sounds.json"] = json.dumps(definitions).encode()
+# Vanilla cannot adjust the volume of a sound instance after it starts.
+# Pre-render a quiet intro that rises into the first track, and short
+# position-matched fade-out excerpts for the Elder's final dialogue.
+import subprocess
+import tempfile
+import math
+music_durations = (263.267846, 347.533061)
+music_definitions = json.loads(files.get("assets/minecraft/sounds.json", b"{}"))
+
+def guardian_music_clip(source, target, start, length, filters=None, quality=4, loop=False):
+    with tempfile.TemporaryDirectory() as temp:
+        output = Path(temp) / (target + ".ogg")
+        cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y"]
+        if loop:
+            cmd += ["-stream_loop", "-1"]
+        if start:
+            cmd += ["-ss", str(start)]
+        cmd += ["-i", str(source), "-map", "0:a:0", "-vn"]
+        if length is not None:
+            cmd += ["-t", str(length)]
+        if filters:
+            cmd += ["-af", filters]
+        cmd += ["-c:a", "libvorbis", "-q:a", str(quality), "-ar", "44100", "-ac", "2", str(output)]
+        subprocess.run(cmd, check=True)
+        raw = output.read_bytes()
+    if not raw.startswith(b"OggS") or b"\x01vorbis" not in raw[:65536]:
+        raise RuntimeError("Invalid cinematic music segment: " + target)
+    files["assets/axoria/sounds/guardian/" + target + ".ogg"] = raw
+    music_definitions["axoria.guardian." + target] = {
+        "sounds": [{"name": "axoria:guardian/" + target, "stream": True, "attenuation_distance": 256}]
+    }
+
+with tempfile.TemporaryDirectory() as temp:
+    for index, duration in enumerate(music_durations, 1):
+        track = "elder_battle_" + str(index)
+        source = Path(temp) / (track + ".ogg")
+        source.write_bytes(files["assets/axoria/sounds/guardian/" + track + ".ogg"])
+        if index == 1:
+            guardian_music_clip(source, track + "_intro", 0, 15,
+                "volume='if(lt(t,13.17),0.18,min(1,0.18+0.82*(t-13.17)/1.83))':eval=frame,afade=t=in:st=0:d=0.3",
+                quality=5)
+            guardian_music_clip(source, track + "_continue", 15, None, quality=5)
+        # Quiet, 14-second endings selected from the nearest 8-second song position.
+        # Loop across the source's end if necessary so music reaches the return TP.
+        for offset in range(0, int(duration) + 1, 8):
+            guardian_music_clip(source, track + "_outro_" + str(offset), offset, 14,
+                "volume='if(lt(t,0.65),1-0.82*t/0.65,0.18)':eval=frame,afade=t=out:st=12:d=2",
+                quality=3, loop=True)
+files["assets/minecraft/sounds.json"] = json.dumps(music_definitions).encode()
+print("Generated cinematic music intro, continuation and position-matched endings.")
 with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as result_zip:
     for path, content in files.items():
         result_zip.writestr(path, content)
