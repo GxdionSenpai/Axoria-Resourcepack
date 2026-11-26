@@ -1092,10 +1092,28 @@ for quest_number in range(1, 25):
     voice_file = Path(__file__).resolve().parent / "audio" / f"{voice_name}.ogg"
     if not voice_file.is_file():
         continue
-    files[f"assets/axoria/sounds/guardian/{voice_name}.ogg"] = voice_file.read_bytes()
+    import subprocess
+    import tempfile
+    # Convert to verified mono Vorbis and use the same vanilla namespace
+    # compatibility path as the existing Elder Guardian soundtrack.
+    with tempfile.TemporaryDirectory() as temp:
+        output = Path(temp) / (voice_name + ".ogg")
+        subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+                        "-y", "-i", str(voice_file), "-map", "0:a:0", "-vn",
+                        "-c:a", "libvorbis", "-q:a", "5", "-ar", "44100",
+                        "-ac", "1", str(output)], check=True)
+        raw = output.read_bytes()
+    if not raw.startswith(b"OggS") or b"\x01vorbis" not in raw[:65536]:
+        raise RuntimeError("Invalid Guardian voice: " + voice_name)
+    files[f"assets/axoria/sounds/guardian/{voice_name}.ogg"] = raw
+    files[f"assets/minecraft/sounds/axoria/guardian/{voice_name}.ogg"] = raw
     sound_definitions = json.loads(files.get("assets/axoria/sounds.json", b"{}"))
     sound_definitions[f"guardian.{voice_name}"] = {"sounds": [{"name": f"axoria:guardian/{voice_name}", "stream": True, "attenuation_distance": 64}]}
     files["assets/axoria/sounds.json"] = json.dumps(sound_definitions).encode()
+    vanilla_definitions = json.loads(files.get("assets/minecraft/sounds.json", b"{}"))
+    vanilla_definitions[f"axoria.guardian.{voice_name}"] = {"sounds": [{"name": f"minecraft:axoria/guardian/{voice_name}", "stream": True, "attenuation_distance": 64}]}
+    files["assets/minecraft/sounds.json"] = json.dumps(vanilla_definitions).encode()
+    print("Verified Guardian quest voice:", voice_name, len(raw), "bytes")
 
 elder_intro = Path(__file__).resolve().parent / "audio" / "elder_intro.ogg"
 if elder_intro.is_file():
